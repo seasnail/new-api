@@ -31,16 +31,14 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { QuickStart } from '@/features/quick-start'
 import { ROLE } from '@/lib/roles'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { ModelsChartPreferences } from './components/models/models-chart-preferences'
 import { ModelsFilter } from './components/models/models-filter-dialog'
-import {
-  DashboardOverviewPanels,
-  OverviewDashboard,
-} from './components/overview/overview-dashboard'
+import { DashboardOverviewPanels } from './components/overview/overview-dashboard'
 import { DEFAULT_TIME_GRANULARITY } from './constants'
 import {
   buildDefaultDashboardFilters,
@@ -198,6 +196,7 @@ export function Dashboard() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const params = route.useParams()
+  const search = route.useSearch()
   const userRole = useAuthStore((state) => state.auth.user?.role)
   const activeSection = (params.section ??
     DASHBOARD_DEFAULT_SECTION) as DashboardSectionId
@@ -320,34 +319,65 @@ export function Dashboard() {
     ) : null
   const sectionActions = modelActions ?? flowActions
 
+  if (activeSection === 'overview') {
+    const quickStartStep =
+      search.step === 'model' && search.tokenId ? 'model' : 'key'
+
+    return (
+      <QuickStart
+        step={quickStartStep}
+        tokenId={search.tokenId}
+        onStepChange={(nextStep) =>
+          navigate({
+            to: '/dashboard/$section',
+            params: { section: 'overview' },
+            search: { ...search, step: nextStep },
+            replace: true,
+          })
+        }
+        onTokenCreated={(tokenId) =>
+          navigate({
+            to: '/dashboard/$section',
+            params: { section: 'overview' },
+            search: { step: 'model', tokenId },
+            replace: true,
+          })
+        }
+        onFinish={() =>
+          navigate({
+            to: '/dashboard/$section',
+            params: { section: 'models' },
+          })
+        }
+      />
+    )
+  }
+
   return (
     <SectionPageLayout>
       <SectionPageLayout.Title>{t(meta.titleKey)}</SectionPageLayout.Title>
       <SectionPageLayout.Content>
         <div className='space-y-3 sm:space-y-4'>
-          {activeSection !== 'overview' && (
-            <div className='flex flex-wrap items-center justify-between gap-1.5 sm:gap-2'>
-              {showSectionTabs ? (
-                <Tabs value={activeSection} onValueChange={handleSectionChange}>
-                  <TabsList className='max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto'>
-                    {visibleSections.map((section) => (
-                      <TabsTrigger key={section} value={section}>
-                        {t(SECTION_META[section].titleKey)}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </Tabs>
-              ) : (
-                <div />
-              )}
-              {sectionActions != null && (
-                <div className='flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2'>
-                  {sectionActions}
-                </div>
-              )}
-            </div>
-          )}
-          {activeSection === 'overview' && <OverviewDashboard />}
+          <div className='flex flex-wrap items-center justify-between gap-1.5 sm:gap-2'>
+            {showSectionTabs ? (
+              <Tabs value={activeSection} onValueChange={handleSectionChange}>
+                <TabsList className='max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto'>
+                  {visibleSections.map((section) => (
+                    <TabsTrigger key={section} value={section}>
+                      {t(SECTION_META[section].titleKey)}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            ) : (
+              <div />
+            )}
+            {sectionActions != null && (
+              <div className='flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2'>
+                {sectionActions}
+              </div>
+            )}
+          </div>
           {activeSection === 'models' && (
             <>
               <DashboardOverviewPanels />

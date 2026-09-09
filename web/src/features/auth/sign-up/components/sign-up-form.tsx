@@ -171,7 +171,7 @@ export function SignUpForm({
 
       if (res?.success) {
         toast.success(t('Account created! Please sign in'))
-        redirectToLogin()
+        redirectToLogin('/dashboard/overview')
       } else {
         toast.error(res?.message || t('Failed to create account'))
       }

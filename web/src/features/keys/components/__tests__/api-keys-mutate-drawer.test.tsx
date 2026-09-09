@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 
 const { createInstance } = await import('i18next')
 const { I18nextProvider, initReactI18next } = await import('react-i18next')
@@ -72,6 +72,37 @@ function installApiFixtures(createdPayloads: Array<Record<string, unknown>>) {
             data: { groups: ['vip', 'default'], max_count: 3 },
           },
         }
+      case '/api/token/?p=1&size=1':
+        return {
+          data: {
+            success: true,
+            data: {
+              items: [
+                {
+                  id: 42,
+                  name: 'onboarding-key',
+                  key: 'abcd...wxyz',
+                  status: 1,
+                  remain_quota: 0,
+                  used_quota: 0,
+                  unlimited_quota: true,
+                  expired_time: -1,
+                  created_time: 1,
+                  accessed_time: 1,
+                  group: 'auto',
+                  auto_groups: null,
+                  cross_group_retry: true,
+                  model_limits_enabled: false,
+                  model_limits: '',
+                  allow_ips: '',
+                },
+              ],
+              total: 1,
+              page: 1,
+              page_size: 1,
+            },
+          },
+        }
       default:
         throw new Error(`Unexpected GET ${url}`)
     }
@@ -84,7 +115,10 @@ function installApiFixtures(createdPayloads: Array<Record<string, unknown>>) {
   }
 }
 
-async function renderCreateDrawer(): Promise<void> {
+async function renderCreateDrawer(options?: {
+  embedded?: boolean
+  onCreated?: (apiKey: import('../../types').ApiKey) => void
+}): Promise<void> {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
@@ -125,14 +159,22 @@ async function renderCreateDrawer(): Promise<void> {
     <QueryClientProvider client={queryClient}>
       <I18nextProvider i18n={i18n}>
         <ApiKeysProvider>
-          <ApiKeysMutateDrawer open onOpenChange={() => undefined} />
+          <ApiKeysMutateDrawer
+            open
+            embedded={options?.embedded}
+            onOpenChange={() => undefined}
+            onCreated={options?.onCreated}
+          />
         </ApiKeysProvider>
       </I18nextProvider>
     </QueryClientProvider>
   )
   await waitFor(
     () => {
-      const saveButton = findButton('Save changes', false)
+      const saveButton = findButton(
+        options?.embedded ? 'Create API Key and continue' : 'Save changes',
+        false
+      )
       expect(saveButton).toBeEnabled()
     },
     { timeout: 1500 }
@@ -204,6 +246,27 @@ afterEach(() => {
 })
 
 describe('API keys mutate drawer Auto group integration', () => {
+  test('renders the create form as an embedded panel and reports the created key', async () => {
+    const createdPayloads: Array<Record<string, unknown>> = []
+    const onCreated = vi.fn()
+    installApiFixtures(createdPayloads)
+    await renderCreateDrawer({ embedded: true, onCreated })
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByText('Basic Information')).toBeInTheDocument()
+    expect(screen.getByText('Quota Settings')).toBeInTheDocument()
+    expect(screen.getByText('Advanced Settings')).toBeInTheDocument()
+
+    changeInput(getControlByLabel('Name'), 'onboarding-key')
+    fireEvent.click(findButton('Create API Key and continue', true))
+
+    await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1))
+    expect(onCreated.mock.calls[0]?.[0]).toMatchObject({
+      id: 42,
+      name: 'onboarding-key',
+    })
+  })
+
   test('inherits the root Auto order and sends an empty override for every batch-created key', async () => {
     const createdPayloads: Array<Record<string, unknown>> = []
     installApiFixtures(createdPayloads)
