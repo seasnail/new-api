@@ -459,12 +459,6 @@ export function OverviewDashboard() {
   const { t } = useTranslation()
   const user = useAuthStore((state) => state.auth.user)
   const { items: apiInfoItems } = useApiInfo()
-  const {
-    apiInfo: showApiInfoPanel,
-    announcements: showAnnouncementsPanel,
-    faq: showFAQPanel,
-    uptimeKuma: showUptimePanel,
-  } = useDashboardContentVisibility()
   const [manualSetupGuideExpanded, setManualSetupGuideExpanded] = useState<
     boolean | null
   >(() => getSavedSetupGuideExpanded())
@@ -607,10 +601,6 @@ export function OverviewDashboard() {
   const setupStatusReady = apiKeysQuery.isFetched && Boolean(user)
   const setupGuideExpanded =
     manualSetupGuideExpanded ?? (setupStatusReady && !setupComplete)
-  const showLeftContentPanels =
-    isAdmin || showApiInfoPanel || showAnnouncementsPanel || showFAQPanel
-  const showContentPanels = showLeftContentPanels || showUptimePanel
-
   const handleSetupGuideToggle = () => {
     const nextExpanded = !setupGuideExpanded
     setManualSetupGuideExpanded(nextExpanded)
@@ -748,9 +738,26 @@ export function OverviewDashboard() {
           </CardStaggerItem>
         </CardStaggerContainer>
       )}
+    </div>
+  )
+}
 
+export function DashboardOverviewPanels() {
+  const userRole = useAuthStore((state) => state.auth.user?.role)
+  const {
+    apiInfo: showApiInfoPanel,
+    announcements: showAnnouncementsPanel,
+    faq: showFAQPanel,
+    uptimeKuma: showUptimePanel,
+  } = useDashboardContentVisibility()
+  const isAdmin = Boolean(userRole && userRole >= ROLE.ADMIN)
+  const showLeftContentPanels =
+    isAdmin || showApiInfoPanel || showAnnouncementsPanel || showFAQPanel
+  const showContentPanels = showLeftContentPanels || showUptimePanel
+
+  return (
+    <>
       <SummaryCards />
-
       {showContentPanels && (
         <CardStaggerContainer
           className={cn(
@@ -797,6 +804,6 @@ export function OverviewDashboard() {
           )}
         </CardStaggerContainer>
       )}
-    </div>
+    </>
   )
 }

@@ -26,7 +26,7 @@ import { createSectionRegistry } from '@/features/system-settings/utils/section-
 const DASHBOARD_SECTIONS = [
   {
     id: 'overview',
-    titleKey: 'Overview',
+    titleKey: 'Quick Start',
     build: () => null,
   },
   {
