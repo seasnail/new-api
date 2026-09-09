@@ -27,6 +27,7 @@ import {
   Copy,
   Link,
   Loader2,
+  SquareTerminal,
 } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -182,6 +183,15 @@ export function DataTableRowActions<TData>({
     }
   }
 
+  const handleOpenCodexConfig = async () => {
+    const realKey = await resolveRealKey(apiKey.id)
+    if (!realKey) return
+
+    setResolvedKey(realKey)
+    setCurrentRow(apiKey)
+    setOpen('codex-config')
+  }
+
   let statusIcon = <Power className='size-4' />
   if (isTogglingStatus) {
     statusIcon = <Loader2 className='size-4 animate-spin' />
@@ -230,6 +240,27 @@ export function DataTableRowActions<TData>({
           <Edit />
         </TooltipTrigger>
         <TooltipContent>{t('Edit')}</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant='ghost'
+              size='icon-sm'
+              onClick={handleOpenCodexConfig}
+              disabled={isRealKeyLoading}
+              aria-label={t('Configure Codex')}
+            />
+          }
+        >
+          {isRealKeyLoading ? (
+            <Loader2 className='animate-spin' />
+          ) : (
+            <SquareTerminal />
+          )}
+        </TooltipTrigger>
+        <TooltipContent>{t('Configure Codex')}</TooltipContent>
       </Tooltip>
 
       <DataTableRowActionMenu

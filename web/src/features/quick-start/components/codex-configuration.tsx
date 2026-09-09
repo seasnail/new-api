@@ -25,6 +25,7 @@ import { useStatus } from '@/hooks/use-status'
 
 type CodexConfigurationProps = {
   apiKey: string
+  embedded?: boolean
   modelName: string
 }
 
@@ -87,15 +88,96 @@ export function CodexConfiguration(props: CodexConfigurationProps) {
   const apiKey = props.apiKey.startsWith('sk-')
     ? props.apiKey
     : `sk-${props.apiKey}`
-  const config = `model = ${JSON.stringify(props.modelName)}\nmodel_provider = "newapi"\n\n[model_providers.newapi]\nname = "New API"\nbase_url = ${JSON.stringify(`${serverAddress}/v1`)}\nenv_key = "NEW_API_KEY"\nwire_api = "responses"`
+  const config = `model = ${JSON.stringify(props.modelName)}\nmodel_provider = "one-gateway"\n\n[model_providers.one-gateway]\nname = "One Gateway"\nbase_url = ${JSON.stringify(`${serverAddress}/v1`)}\nenv_key = "ONE_GATEWAY_KEY"\nwire_api = "responses"`
 
   const environmentCommand = (platform: Platform) => {
     if (platform === 'windows') {
-      return `[Environment]::SetEnvironmentVariable("NEW_API_KEY", "${apiKey}", "User")`
+      return `[Environment]::SetEnvironmentVariable("ONE_GATEWAY_KEY", "${apiKey}", "User")`
     }
 
     const profile = PLATFORM_DETAILS[platform].profile
-    return `echo 'export NEW_API_KEY="${apiKey}"' >> ${profile}\nsource ${profile}`
+    return `echo 'export ONE_GATEWAY_KEY="${apiKey}"' >> ${profile}\nsource ${profile}`
+  }
+
+  const instructions = (
+    <Tabs defaultValue='windows'>
+      <TabsList aria-label={t('Operating system')}>
+        {(Object.keys(PLATFORM_DETAILS) as Platform[]).map((platform) => (
+          <TabsTrigger key={platform} value={platform}>
+            {t(PLATFORM_DETAILS[platform].labelKey)}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+
+      {(Object.keys(PLATFORM_DETAILS) as Platform[]).map((platform) => {
+        const details = PLATFORM_DETAILS[platform]
+        return (
+          <TabsContent key={platform} value={platform} className='mt-4'>
+            <ol className='space-y-6'>
+              <li className='space-y-2'>
+                <h3 className='font-medium'>
+                  1. {t('Open the Codex config file')}
+                </h3>
+                <p className='text-muted-foreground text-sm'>
+                  {t('Run these commands in {{terminal}}.', {
+                    terminal:
+                      details.profile === 'PowerShell'
+                        ? 'PowerShell'
+                        : t('Terminal'),
+                  })}{' '}
+                  <code className='bg-muted rounded px-1 py-0.5 text-xs'>
+                    {details.path}
+                  </code>
+                </p>
+                <CommandBlock
+                  code={details.openCommand}
+                  label={t('Copy file commands')}
+                />
+              </li>
+
+              <li className='space-y-2'>
+                <h3 className='font-medium'>
+                  2. {t('Add the provider configuration')}
+                </h3>
+                <p className='text-muted-foreground text-sm'>
+                  {t(
+                    'Paste this into config.toml. If the file already has settings, merge these values instead of replacing the file.'
+                  )}
+                </p>
+                <CommandBlock code={config} label={t('Copy configuration')} />
+              </li>
+
+              <li className='space-y-2'>
+                <h3 className='font-medium'>3. {t('Set the API key')}</h3>
+                <p className='text-muted-foreground text-sm'>
+                  {t(
+                    'Store the API key in an environment variable; do not paste it into config.toml.'
+                  )}
+                </p>
+                <CommandBlock
+                  code={environmentCommand(platform)}
+                  label={t('Copy environment command')}
+                />
+              </li>
+
+              <li className='space-y-2'>
+                <h3 className='font-medium'>4. {t('Start Codex')}</h3>
+                <p className='text-muted-foreground text-sm'>
+                  {t(
+                    'Open a new terminal after saving the environment variable, then run Codex.'
+                  )}
+                </p>
+                <CommandBlock code='codex' label={t('Copy command')} />
+              </li>
+            </ol>
+          </TabsContent>
+        )
+      })}
+    </Tabs>
+  )
+
+  if (props.embedded) {
+    return instructions
   }
 
   return (
@@ -108,85 +190,7 @@ export function CodexConfiguration(props: CodexConfigurationProps) {
           )}
         </p>
       </CardHeader>
-      <CardContent>
-        <Tabs defaultValue='windows'>
-          <TabsList aria-label={t('Operating system')}>
-            {(Object.keys(PLATFORM_DETAILS) as Platform[]).map((platform) => (
-              <TabsTrigger key={platform} value={platform}>
-                {t(PLATFORM_DETAILS[platform].labelKey)}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          {(Object.keys(PLATFORM_DETAILS) as Platform[]).map((platform) => {
-            const details = PLATFORM_DETAILS[platform]
-            return (
-              <TabsContent key={platform} value={platform} className='mt-4'>
-                <ol className='space-y-6'>
-                  <li className='space-y-2'>
-                    <h3 className='font-medium'>
-                      1. {t('Open the Codex config file')}
-                    </h3>
-                    <p className='text-muted-foreground text-sm'>
-                      {t('Run these commands in {{terminal}}.', {
-                        terminal:
-                          details.profile === 'PowerShell'
-                            ? 'PowerShell'
-                            : t('Terminal'),
-                      })}{' '}
-                      <code className='bg-muted rounded px-1 py-0.5 text-xs'>
-                        {details.path}
-                      </code>
-                    </p>
-                    <CommandBlock
-                      code={details.openCommand}
-                      label={t('Copy file commands')}
-                    />
-                  </li>
-
-                  <li className='space-y-2'>
-                    <h3 className='font-medium'>
-                      2. {t('Add the provider configuration')}
-                    </h3>
-                    <p className='text-muted-foreground text-sm'>
-                      {t(
-                        'Paste this into config.toml. If the file already has settings, merge these values instead of replacing the file.'
-                      )}
-                    </p>
-                    <CommandBlock
-                      code={config}
-                      label={t('Copy configuration')}
-                    />
-                  </li>
-
-                  <li className='space-y-2'>
-                    <h3 className='font-medium'>3. {t('Set the API key')}</h3>
-                    <p className='text-muted-foreground text-sm'>
-                      {t(
-                        'Store the API key in an environment variable; do not paste it into config.toml.'
-                      )}
-                    </p>
-                    <CommandBlock
-                      code={environmentCommand(platform)}
-                      label={t('Copy environment command')}
-                    />
-                  </li>
-
-                  <li className='space-y-2'>
-                    <h3 className='font-medium'>4. {t('Start Codex')}</h3>
-                    <p className='text-muted-foreground text-sm'>
-                      {t(
-                        'Open a new terminal after saving the environment variable, then run Codex.'
-                      )}
-                    </p>
-                    <CommandBlock code='codex' label={t('Copy command')} />
-                  </li>
-                </ol>
-              </TabsContent>
-            )
-          })}
-        </Tabs>
-      </CardContent>
+      <CardContent>{instructions}</CardContent>
     </Card>
   )
 }
