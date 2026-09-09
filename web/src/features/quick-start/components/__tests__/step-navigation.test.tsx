@@ -28,6 +28,7 @@ describe('quick start step navigation', () => {
       <QuickStartStepNav
         activeStep='key'
         modelStepEnabled={false}
+        codexStepEnabled={false}
         onStepChange={onStepChange}
       />
     )
@@ -36,19 +37,22 @@ describe('quick start step navigation', () => {
     const modelStep = screen.getByRole('button', {
       name: /Choose a model and make your first request/,
     })
+    const codexStep = screen.getByRole('button', { name: /Configure Codex/ })
 
     expect(keyStep).toHaveAttribute('aria-current', 'step')
     expect(modelStep).toBeDisabled()
+    expect(codexStep).toBeDisabled()
     fireEvent.click(modelStep)
     expect(onStepChange).not.toHaveBeenCalled()
   })
 
-  test('allows moving between both steps after an API key is available', () => {
+  test('allows moving between all enabled steps', () => {
     const onStepChange = vi.fn()
     render(
       <QuickStartStepNav
         activeStep='model'
         modelStepEnabled
+        codexStepEnabled
         onStepChange={onStepChange}
       />
     )
@@ -57,11 +61,14 @@ describe('quick start step navigation', () => {
     const modelStep = screen.getByRole('button', {
       name: /Choose a model and make your first request/,
     })
+    const codexStep = screen.getByRole('button', { name: /Configure Codex/ })
 
     expect(modelStep).toHaveAttribute('aria-current', 'step')
     fireEvent.click(keyStep)
     fireEvent.click(modelStep)
+    fireEvent.click(codexStep)
     expect(onStepChange).toHaveBeenNthCalledWith(1, 'key')
     expect(onStepChange).toHaveBeenNthCalledWith(2, 'model')
+    expect(onStepChange).toHaveBeenNthCalledWith(3, 'codex')
   })
 })

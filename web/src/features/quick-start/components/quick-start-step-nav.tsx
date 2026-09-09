@@ -16,18 +16,24 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { Key01Icon, SparklesIcon, Tick02Icon } from '@hugeicons/core-free-icons'
+import {
+  CodeSquareIcon,
+  Key01Icon,
+  SparklesIcon,
+  Tick02Icon,
+} from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-type QuickStartStep = 'key' | 'model'
+type QuickStartStep = 'key' | 'model' | 'codex'
 
 type QuickStartStepNavProps = {
   activeStep: QuickStartStep
   modelStepEnabled: boolean
+  codexStepEnabled: boolean
   onStepChange: (step: QuickStartStep) => void
 }
 
@@ -46,14 +52,22 @@ export function QuickStartStepNav(props: QuickStartStepNavProps) {
       icon: SparklesIcon,
       enabled: props.modelStepEnabled,
     },
+    {
+      id: 'codex' as const,
+      label: t('Configure Codex'),
+      icon: CodeSquareIcon,
+      enabled: props.codexStepEnabled,
+    },
   ]
 
   return (
     <nav aria-label={t('Quick start steps')}>
-      <ol className='grid gap-2 sm:grid-cols-2'>
+      <ol className='grid gap-2 sm:grid-cols-3'>
         {steps.map((step, index) => {
           const active = step.id === props.activeStep
-          const completed = step.id === 'key' && props.modelStepEnabled
+          const completed =
+            (step.id === 'key' && props.modelStepEnabled) ||
+            (step.id === 'model' && props.codexStepEnabled)
 
           return (
             <li key={step.id}>

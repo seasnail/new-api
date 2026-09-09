@@ -51,6 +51,7 @@ import { ModelDetailsApi } from '@/features/pricing/components/model-details-api
 import { usePricingData } from '@/features/pricing/hooks/use-pricing-data'
 import { getUserModels } from '@/lib/api'
 
+import { CodexConfiguration } from './components/codex-configuration'
 import {
   QuickStartStepNav,
   type QuickStartStep,
@@ -67,12 +68,14 @@ type QuickStartProps = {
 export function QuickStart(props: QuickStartProps) {
   const { t } = useTranslation()
   const [selectedModelName, setSelectedModelName] = useState('')
-  const modelStepActive = props.step === 'model' && props.tokenId !== undefined
+  const configuredStepActive =
+    props.step !== 'key' && props.tokenId !== undefined
+  const codexStepActive = props.step === 'codex' && configuredStepActive
 
   const apiKeyQuery = useQuery({
     queryKey: ['quick-start', 'api-key', props.tokenId],
     queryFn: () => getApiKey(props.tokenId ?? 0),
-    enabled: modelStepActive,
+    enabled: configuredStepActive,
   })
   const apiKey = apiKeyQuery.data?.data
 
@@ -82,9 +85,9 @@ export function QuickStart(props: QuickStartProps) {
       const result = await getUserModels(apiKey?.group || undefined)
       return result.success ? (result.data ?? []) : []
     },
-    enabled: modelStepActive && apiKey !== undefined,
+    enabled: configuredStepActive && apiKey !== undefined,
   })
-  const pricing = usePricingData(modelStepActive)
+  const pricing = usePricingData(configuredStepActive)
 
   const availableModels = useMemo(() => {
     const availableNames = new Set(modelNamesQuery.data ?? [])
@@ -218,8 +221,11 @@ export function QuickStart(props: QuickStartProps) {
             </p>
           </div>
           <QuickStartStepNav
-            activeStep={modelStepActive ? 'model' : 'key'}
+            activeStep={configuredStepActive ? props.step : 'key'}
             modelStepEnabled={props.tokenId !== undefined}
+            codexStepEnabled={
+              props.tokenId !== undefined && availableModels.length > 0
+            }
             onStepChange={props.onStepChange}
           />
         </div>
@@ -227,7 +233,7 @@ export function QuickStart(props: QuickStartProps) {
 
       <ScrollArea className='min-h-0 flex-1'>
         <div className='mx-auto w-full max-w-6xl p-4 sm:p-6'>
-          {!modelStepActive ? (
+          {!configuredStepActive ? (
             <ApiKeysProvider>
               <ApiKeysMutateDrawer
                 open
@@ -249,18 +255,35 @@ export function QuickStart(props: QuickStartProps) {
                 </Alert>
               )}
 
-              {modelStepContent}
+              {codexStepActive && apiKey && selectedModel ? (
+                <CodexConfiguration
+                  apiKey={apiKey.key}
+                  modelName={selectedModel.model_name}
+                />
+              ) : (
+                modelStepContent
+              )}
 
               <div className='flex flex-wrap justify-between gap-2'>
                 <Button
                   type='button'
                   variant='outline'
-                  onClick={() => props.onStepChange('key')}
+                  onClick={() =>
+                    props.onStepChange(codexStepActive ? 'model' : 'key')
+                  }
                 >
-                  {t('Back to API key')}
+                  {codexStepActive ? t('Back to model') : t('Back to API key')}
                 </Button>
-                <Button type='button' onClick={props.onFinish}>
-                  {t('Finish')}
+                <Button
+                  type='button'
+                  onClick={() =>
+                    codexStepActive
+                      ? props.onFinish()
+                      : props.onStepChange('codex')
+                  }
+                  disabled={!selectedModel}
+                >
+                  {codexStepActive ? t('Finish') : t('Configure Codex')}
                 </Button>
               </div>
             </div>

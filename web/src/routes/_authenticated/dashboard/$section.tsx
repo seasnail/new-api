@@ -26,7 +26,7 @@ import {
 } from '@/features/dashboard/section-registry'
 
 const dashboardSearchSchema = z.object({
-  step: z.enum(['key', 'model']).optional().catch(undefined),
+  step: z.enum(['key', 'model', 'codex']).optional().catch(undefined),
   tokenId: z.coerce.number().int().positive().optional().catch(undefined),
 })
 

@@ -320,8 +320,7 @@ export function Dashboard() {
   const sectionActions = modelActions ?? flowActions
 
   if (activeSection === 'overview') {
-    const quickStartStep =
-      search.step === 'model' && search.tokenId ? 'model' : 'key'
+    const quickStartStep = search.tokenId ? (search.step ?? 'key') : 'key'
 
     return (
       <QuickStart
