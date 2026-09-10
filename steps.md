@@ -25,6 +25,9 @@ sudo chown -R ec2-user:ec2-user /srv/new-api
 Run docker
 
 ```
+docker pull ghcr.io/seasnail/new-api:main
+docker stop new-api
+docker rm new-api
 docker run -d \
   --name new-api \
   --restart unless-stopped \

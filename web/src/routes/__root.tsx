@@ -24,7 +24,6 @@ import {
   redirect,
   useNavigate,
 } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
 
 import { NavigationProgress } from '@/components/navigation-progress'
@@ -100,7 +99,6 @@ function RootComponent() {
       {import.meta.env.MODE === 'development' && (
         <>
           <ReactQueryDevtools buttonPosition='bottom-left' />
-          <TanStackRouterDevtools position='bottom-right' />
         </>
       )}
     </ThemeCustomizationProvider>
