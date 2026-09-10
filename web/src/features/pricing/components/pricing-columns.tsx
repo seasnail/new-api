@@ -17,6 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import type { ColumnDef } from '@tanstack/react-table'
+import { Eye } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -24,7 +25,7 @@ import {
   BadgeListCell,
   DataTableColumnHeader,
 } from '@/components/data-table'
-import { GroupBadge } from '@/components/group-badge'
+import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/status-badge'
 import { getLobeIcon } from '@/lib/lobe-icon'
 
@@ -55,6 +56,7 @@ export interface PricingColumnsOptions {
   usdExchangeRate?: number
   showRechargePrice?: boolean
   selectedGroup?: string
+  onModelClick?: (modelName: string) => void
 }
 
 export function usePricingColumns(
@@ -67,6 +69,7 @@ export function usePricingColumns(
     usdExchangeRate = 1,
     showRechargePrice = false,
     selectedGroup,
+    onModelClick,
   } = options
 
   const tokenUnitLabel = tokenUnit === 'K' ? '1K' : '1M'
@@ -415,22 +418,26 @@ export function usePricingColumns(
       enableSorting: false,
     },
 
-    // Enable Groups column
+    // Details column
     {
-      accessorKey: 'enable_groups',
-      header: t('Groups'),
-      cell: ({ row }) => {
-        const groups = row.original.enable_groups || []
-        return (
-          <BadgeListCell
-            items={groups.map((group) => (
-              <GroupBadge key={group} group={group} size='sm' />
-            ))}
-            tooltipClassName='max-w-[280px] p-2'
-          />
-        )
-      },
-      size: 130,
+      id: 'details',
+      header: t('Details'),
+      cell: ({ row }) => (
+        <Button
+          type='button'
+          variant='ghost'
+          size='icon'
+          className='size-8'
+          aria-label={t('View details')}
+          onClick={(event) => {
+            event.stopPropagation()
+            onModelClick?.(row.original.model_name)
+          }}
+        >
+          <Eye className='size-3.5' aria-hidden='true' />
+        </Button>
+      ),
+      size: 120,
       enableSorting: false,
     },
   ]

@@ -66,6 +66,7 @@ export function PricingTable(props: PricingTableProps) {
     usdExchangeRate,
     showRechargePrice,
     selectedGroup,
+    onModelClick,
   })
 
   const { table } = useDataTable({
@@ -90,6 +91,7 @@ export function PricingTable(props: PricingTableProps) {
   return (
     <div className='space-y-4'>
       <DataTableView
+        key={tokenUnit}
         table={table}
         isLoading={isLoading}
         emptyTitle={t('No Models Found')}

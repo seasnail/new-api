@@ -60,16 +60,12 @@ export interface PricingSidebarProps {
   quotaTypeFilter: string
   endpointTypeFilter: string
   vendorFilter: string
-  groupFilter: string
   tagFilter: string
   onQuotaTypeChange: (value: string) => void
   onEndpointTypeChange: (value: string) => void
   onVendorChange: (value: string) => void
-  onGroupChange: (value: string) => void
   onTagChange: (value: string) => void
   vendors: PricingVendor[]
-  groups: string[]
-  groupRatios?: Record<string, number>
   tags: string[]
   models: PricingModel[]
   hasActiveFilters: boolean
@@ -83,14 +79,6 @@ function countBy(
   predicate: (model: PricingModel) => boolean
 ): number {
   return models.reduce((count, model) => count + (predicate(model) ? 1 : 0), 0)
-}
-
-function formatGroupRatio(ratio: number | undefined): string | undefined {
-  if (ratio == null) return undefined
-  const formatted = Number.isInteger(ratio)
-    ? ratio.toString()
-    : ratio.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')
-  return `x${formatted}`
 }
 
 function FilterChip(props: {
@@ -180,19 +168,7 @@ export function PricingSidebar(props: PricingSidebarProps) {
         icon: vendor.icon ? getLobeIcon(vendor.icon, 14) : undefined,
       }))
       .filter((vendor) => vendor.count > 0),
-  ]
-
-  const groupOptions: FilterOption[] = [
-    {
-      value: FILTER_ALL,
-      label: t('All Groups'),
-    },
-    ...props.groups.map((group) => ({
-      value: group,
-      label: group,
-      suffix: formatGroupRatio(props.groupRatios?.[group]),
-    })),
-  ]
+  ].filter((option) => option.count == null || option.count > 0)
 
   const quotaOptions: FilterOption[] = [
     {
@@ -221,7 +197,7 @@ export function PricingSidebar(props: PricingSidebarProps) {
       label: quotaTypeLabels[QUOTA_TYPES.TASK],
       count: countBy(props.models, (model) => hasTaskUsageSchema(model)),
     },
-  ]
+  ].filter((option) => option.count == null || option.count > 0)
 
   const tagOptions: FilterOption[] = [
     {
@@ -238,7 +214,7 @@ export function PricingSidebar(props: PricingSidebarProps) {
           .includes(tag.toLowerCase())
       ),
     })),
-  ]
+  ].filter((option) => option.count == null || option.count > 0)
 
   const endpointOptions: FilterOption[] = [
     {
@@ -256,16 +232,13 @@ export function PricingSidebar(props: PricingSidebarProps) {
           (model) => model.supported_endpoint_types?.includes(value) ?? false
         ),
       })),
-  ]
+  ].filter((option) => option.count == null || option.count > 0)
 
   return (
     <aside className={cn('rounded-xl border p-3', props.className)}>
       <div className='mb-2.5 flex items-center justify-between gap-2'>
         <div>
           <h2 className='text-foreground text-sm font-bold'>{t('Filter')}</h2>
-          <p className='text-muted-foreground mt-1 text-xs'>
-            {t('Refine models by provider, group, type, and tags.')}
-          </p>
         </div>
         <Button
           type='button'
@@ -289,16 +262,10 @@ export function PricingSidebar(props: PricingSidebarProps) {
       <div
         className={cn(
           props.layout === 'top'
-            ? 'grid gap-x-4 sm:grid-cols-2 xl:grid-cols-5'
+            ? 'grid gap-x-4 sm:grid-cols-2 xl:grid-cols-4'
             : 'space-y-1'
         )}
       >
-        <FilterSection
-          title={t('Groups')}
-          value={props.groupFilter}
-          options={groupOptions}
-          onChange={props.onGroupChange}
-        />
         <FilterSection
           title={t('All Vendors')}
           value={props.vendorFilter}

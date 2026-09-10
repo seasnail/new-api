@@ -84,7 +84,6 @@ vi.mock('../hooks/use-filters', () => ({
     searchInput: '',
     sortBy: 'name',
     vendorFilter: 'all',
-    groupFilter: 'all',
     quotaTypeFilter: 'all',
     endpointTypeFilter: 'all',
     tagFilter: 'all',
@@ -94,7 +93,6 @@ vi.mock('../hooks/use-filters', () => ({
     setSearchInput: vi.fn(),
     setSortBy: vi.fn(),
     setVendorFilter: vi.fn(),
-    setGroupFilter: vi.fn(),
     setQuotaTypeFilter: vi.fn(),
     setEndpointTypeFilter: vi.fn(),
     setTagFilter: vi.fn(),
@@ -111,11 +109,11 @@ vi.mock('../hooks/use-filters', () => ({
 }))
 
 describe('model list layout', () => {
-  it('shows the Model List title and places the top filters before the table', () => {
+  it('shows the Models title and places the top filters before the table', () => {
     render(<Pricing />)
 
     expect(
-      screen.getByRole('heading', { name: 'Model List' })
+      screen.getByRole('heading', { name: 'Models' })
     ).toBeInTheDocument()
     expect(screen.getByTestId('filters')).toHaveAttribute('data-layout', 'top')
     expect(screen.getByTestId('toolbar')).toHaveAttribute(
