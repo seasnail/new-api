@@ -136,19 +136,20 @@ export function Wallet(props: WalletProps) {
     }
   }, [props.initialShowHistory])
 
-  // Initialize topup amount when topup info is loaded
+  // Initialize topup amount from the first available preset
   const topupAmountInitializedRef = useRef(false)
   useEffect(() => {
-    if (topupInfo && !topupAmountInitializedRef.current) {
+    const initialPreset = presetAmounts[0]
+    if (topupInfo && initialPreset && !topupAmountInitializedRef.current) {
       topupAmountInitializedRef.current = true
-      const minTopup = getMinTopupAmount(topupInfo)
-      setTopupAmount(minTopup)
+      setTopupAmount(initialPreset.value)
+      setSelectedPreset(initialPreset.value)
 
       // Calculate initial payment amount with default payment type
       const defaultPaymentType = getDefaultPaymentType(topupInfo)
-      calculatePaymentAmount(minTopup, defaultPaymentType)
+      calculatePaymentAmount(initialPreset.value, defaultPaymentType)
     }
-  }, [topupInfo, calculatePaymentAmount])
+  }, [topupInfo, presetAmounts, calculatePaymentAmount])
 
   // Get current payment type (selected or default)
   const getCurrentPaymentType = useCallback(() => {
@@ -160,13 +161,6 @@ export function Wallet(props: WalletProps) {
     setTopupAmount(preset.value)
     setSelectedPreset(preset.value)
     calculatePaymentAmount(preset.value, getCurrentPaymentType())
-  }
-
-  // Handle topup amount change
-  const handleTopupAmountChange = (amount: number) => {
-    setTopupAmount(amount)
-    setSelectedPreset(null)
-    calculatePaymentAmount(amount, getCurrentPaymentType())
   }
 
   // Handle payment method selection
@@ -304,7 +298,6 @@ export function Wallet(props: WalletProps) {
                   selectedPreset={selectedPreset}
                   onSelectPreset={handleSelectPreset}
                   topupAmount={topupAmount}
-                  onTopupAmountChange={handleTopupAmountChange}
                   paymentAmount={paymentAmount}
                   calculating={calculating}
                   onPaymentMethodSelect={handlePaymentMethodSelect}

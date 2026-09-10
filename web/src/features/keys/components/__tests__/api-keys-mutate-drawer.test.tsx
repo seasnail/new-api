@@ -256,6 +256,14 @@ describe('API keys mutate drawer Auto group integration', () => {
     expect(screen.getByText('Basic Information')).toBeInTheDocument()
     expect(screen.getByText('Quota Settings')).toBeInTheDocument()
     expect(screen.getByText('Advanced Settings')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Group' })
+    ).not.toBeInTheDocument()
+    expect(
+      [...document.querySelectorAll('label')].some(
+        (label) => label.textContent?.trim() === 'Group'
+      )
+    ).toBe(false)
 
     changeInput(getControlByLabel('Name'), 'onboarding-key')
     fireEvent.click(findButton('Create API Key and continue', true))
@@ -265,6 +273,10 @@ describe('API keys mutate drawer Auto group integration', () => {
       id: 42,
       name: 'onboarding-key',
     })
+    expect(createdPayloads).toHaveLength(1)
+    expect(createdPayloads[0]?.group).toBe('')
+    expect(createdPayloads[0]?.auto_groups).toEqual([])
+    expect(createdPayloads[0]?.cross_group_retry).toBe(false)
   })
 
   test('inherits the root Auto order and sends an empty override for every batch-created key', async () => {
