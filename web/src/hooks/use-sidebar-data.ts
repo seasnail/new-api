@@ -82,6 +82,11 @@ export function useSidebarData(): SidebarData {
             icon: LayoutDashboard,
           },
           {
+            title: t('Models'),
+            url: '/pricing',
+            icon: Box,
+          },
+          {
             title: t('API Keys'),
             url: '/keys',
             icon: Key,

@@ -74,6 +74,7 @@ export interface PricingSidebarProps {
   models: PricingModel[]
   hasActiveFilters: boolean
   onClearFilters: () => void
+  layout?: 'sidebar' | 'top'
   className?: string
 }
 
@@ -285,7 +286,13 @@ export function PricingSidebar(props: PricingSidebarProps) {
         </Badge>
       )}
 
-      <div className='space-y-1'>
+      <div
+        className={cn(
+          props.layout === 'top'
+            ? 'grid gap-x-4 sm:grid-cols-2 xl:grid-cols-5'
+            : 'space-y-1'
+        )}
+      >
         <FilterSection
           title={t('Groups')}
           value={props.groupFilter}
