@@ -33,14 +33,22 @@ type Platform = 'windows' | 'macos' | 'linux'
 
 const PLATFORM_DETAILS: Record<
   Platform,
-  { labelKey: string; path: string; openCommand: string; profile: string }
+  {
+    labelKey: string
+    openCommand: string
+    path: string
+    profile: string
+    stopCommand: string
+  }
 > = {
   windows: {
     labelKey: 'Windows',
     path: '%USERPROFILE%\\.codex\\config.toml',
     openCommand:
-      'New-Item -ItemType Directory -Force "$env:USERPROFILE\\.codex"\nnotepad "$env:USERPROFILE\\.codex\\config.toml"',
+      '$codexDir = Join-Path $env:USERPROFILE ".codex"\n$configPath = Join-Path $codexDir "config.toml"\nNew-Item -ItemType Directory -Force -Path $codexDir | Out-Null\nif (-not (Test-Path $configPath)) { New-Item -ItemType File -Path $configPath | Out-Null }\nnotepad $configPath',
     profile: 'PowerShell',
+    stopCommand:
+      'Get-Process -Name "Codex" -ErrorAction SilentlyContinue | Stop-Process -Force',
   },
   macos: {
     labelKey: 'macOS',
@@ -48,12 +56,17 @@ const PLATFORM_DETAILS: Record<
     openCommand:
       'mkdir -p ~/.codex && touch ~/.codex/config.toml\nopen -e ~/.codex/config.toml',
     profile: '~/.zshrc',
+    stopCommand:
+      'pkill -x Codex 2>/dev/null || true\npkill -x codex 2>/dev/null || true',
   },
   linux: {
     labelKey: 'Linux',
     path: '~/.codex/config.toml',
-    openCommand: 'mkdir -p ~/.codex\n${EDITOR:-nano} ~/.codex/config.toml',
+    openCommand:
+      'mkdir -p ~/.codex && touch ~/.codex/config.toml\n${EDITOR:-nano} ~/.codex/config.toml',
     profile: '~/.bashrc',
+    stopCommand:
+      'pkill -x Codex 2>/dev/null || true\npkill -x codex 2>/dev/null || true',
   },
 }
 
@@ -115,16 +128,32 @@ export function CodexConfiguration(props: CodexConfigurationProps) {
           <TabsContent key={platform} value={platform} className='mt-4'>
             <ol className='space-y-6'>
               <li className='space-y-2'>
+                <h3 className='font-medium'>1. {t('Close Codex')}</h3>
+                <p className='text-muted-foreground text-sm'>
+                  {t(
+                    'Quit Codex and stop any remaining background processes before changing the configuration.'
+                  )}
+                </p>
+                <CommandBlock
+                  code={details.stopCommand}
+                  label={t('Copy stop command')}
+                />
+              </li>
+
+              <li className='space-y-2'>
                 <h3 className='font-medium'>
-                  1. {t('Open the Codex config file')}
+                  2. {t('Open the Codex config file')}
                 </h3>
                 <p className='text-muted-foreground text-sm'>
-                  {t('Run these commands in {{terminal}}.', {
-                    terminal:
-                      details.profile === 'PowerShell'
-                        ? 'PowerShell'
-                        : t('Terminal'),
-                  })}{' '}
+                  {t(
+                    'Run these commands in {{terminal}} to create the config file if needed and open it.',
+                    {
+                      terminal:
+                        details.profile === 'PowerShell'
+                          ? 'PowerShell'
+                          : t('Terminal'),
+                    }
+                  )}{' '}
                   <code className='bg-muted rounded px-1 py-0.5 text-xs'>
                     {details.path}
                   </code>
@@ -137,7 +166,7 @@ export function CodexConfiguration(props: CodexConfigurationProps) {
 
               <li className='space-y-2'>
                 <h3 className='font-medium'>
-                  2. {t('Add the provider configuration')}
+                  3. {t('Add the provider configuration')}
                 </h3>
                 <p className='text-muted-foreground text-sm'>
                   {t(
@@ -148,7 +177,7 @@ export function CodexConfiguration(props: CodexConfigurationProps) {
               </li>
 
               <li className='space-y-2'>
-                <h3 className='font-medium'>3. {t('Set the API key')}</h3>
+                <h3 className='font-medium'>4. {t('Set the API key')}</h3>
                 <p className='text-muted-foreground text-sm'>
                   {t(
                     'Store the API key in an environment variable; do not paste it into config.toml.'
@@ -161,10 +190,10 @@ export function CodexConfiguration(props: CodexConfigurationProps) {
               </li>
 
               <li className='space-y-2'>
-                <h3 className='font-medium'>4. {t('Start Codex')}</h3>
+                <h3 className='font-medium'>5. {t('Restart Codex')}</h3>
                 <p className='text-muted-foreground text-sm'>
                   {t(
-                    'Open a new terminal after saving the environment variable, then run Codex.'
+                    'Open a new terminal after saving the environment variable, then restart Codex.'
                   )}
                 </p>
                 <CommandBlock code='codex' label={t('Copy command')} />

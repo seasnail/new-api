@@ -35,11 +35,27 @@ describe('Codex configuration instructions', () => {
     expect(document.body).toHaveTextContent(
       'base_url = "https://api.example.com/v1"'
     )
-    expect(document.body).toHaveTextContent('env_key = "NEW_API_KEY"')
+    expect(document.body).toHaveTextContent('env_key = "ONE_GATEWAY_KEY"')
     expect(document.body).toHaveTextContent('sk-example-key')
     expect(document.body).toHaveTextContent(
       '%USERPROFILE%\\.codex\\config.toml'
     )
+    expect(document.body).toHaveTextContent(
+      'Get-Process -Name "Codex" -ErrorAction SilentlyContinue | Stop-Process -Force'
+    )
+    expect(document.body).toHaveTextContent('New-Item -ItemType File')
+    const stepNames = [
+      '1. Close Codex',
+      '2. Open the Codex config file',
+      '3. Add the provider configuration',
+      '4. Set the API key',
+      '5. Restart Codex',
+    ]
+    for (const stepName of stepNames) {
+      expect(
+        screen.getByRole('heading', { name: stepName })
+      ).toBeInTheDocument()
+    }
   })
 
   test('shows the correct shell profile for macOS and Linux', () => {
@@ -49,8 +65,14 @@ describe('Codex configuration instructions', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'macOS' }))
     expect(document.body).toHaveTextContent('~/.zshrc')
+    expect(document.body).toHaveTextContent(
+      'mkdir -p ~/.codex && touch ~/.codex/config.toml'
+    )
 
     fireEvent.click(screen.getByRole('tab', { name: 'Linux' }))
     expect(document.body).toHaveTextContent('~/.bashrc')
+    expect(document.body).toHaveTextContent(
+      '${EDITOR:-nano} ~/.codex/config.toml'
+    )
   })
 })
