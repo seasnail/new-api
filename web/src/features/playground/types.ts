@@ -137,15 +137,8 @@ export interface ParameterEnabled {
   seed: boolean
 }
 
-// Model and group options
+// Model options
 export interface ModelOption {
   label: string
   value: string
-}
-
-export interface GroupOption {
-  label: string
-  value: string
-  ratio: number
-  desc?: string
 }

@@ -23,7 +23,6 @@ import type {
   ChatCompletionRequest,
   ChatCompletionResponse,
   ModelOption,
-  GroupOption,
 } from './types'
 
 /**
@@ -56,27 +55,5 @@ export async function getUserModels(group: string): Promise<ModelOption[]> {
   return data.data.map((model: string) => ({
     label: model,
     value: model,
-  }))
-}
-
-/**
- * Get user groups
- */
-export async function getUserGroups(): Promise<GroupOption[]> {
-  const res = await api.get(API_ENDPOINTS.USER_GROUPS)
-  const { data } = res
-
-  if (!data.success || !data.data) {
-    return []
-  }
-
-  const groupData = data.data as Record<string, { desc: string; ratio: number }>
-
-  // label is for button display (name only); desc is for dropdown content
-  return Object.entries(groupData).map(([group, info]) => ({
-    label: group,
-    value: group,
-    ratio: info.ratio,
-    desc: info.desc,
   }))
 }

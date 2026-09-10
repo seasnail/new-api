@@ -29,7 +29,7 @@ export type MessageStateUpdater =
   | ((previousMessages: Message[]) => Message[])
 
 export function getInitialPlaygroundConfig(): PlaygroundConfig {
-  return { ...DEFAULT_CONFIG, ...loadConfig() }
+  return { ...DEFAULT_CONFIG, ...loadConfig(), group: DEFAULT_CONFIG.group }
 }
 
 export function getInitialParameterEnabled(): ParameterEnabled {
