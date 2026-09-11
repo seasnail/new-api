@@ -41,39 +41,39 @@ docker run -d \
 
 # Local dev
 
-## Backend & Front end (on port specified by .env)
 
-直接运行
-
+## 使用 bun 构建前端资源
 ```
-go run main.go
+cd web
+bun run build   
 ```
 
-或者编译后运行
-
+## update and run backend
 ```
+cd ..
 go build -o new-api
-```
-
-## Front end development (on port 5173 and will auto reload changes)
-
-1. Start backend as usual
-```
 go run main.go
 ```
-2. Start frontend at a different port for auto reload on update
 
+## Start frontend at a different port for auto reload on update
 ```
 cd web
 bun run dev --port 5173  
 ```
 
 
-
-使用 bun 构建前端资源
+## All in one
 ```
 cd web
-bun run build   # 使用 bun 构建前端资源
+bun run build   
+cd ..
+go build -o new-api
+go run main.go
+
 ```
+###  In new window
+```
+cd web
+bun run dev --port 5173
 
-
+```

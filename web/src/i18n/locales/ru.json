@@ -2211,6 +2211,7 @@
     "Full JSON": "Полный JSON",
     "Full layout": "Полная разметка",
     "Full width": "Полная ширина",
+    "Fully quit Codex and ChatGPT, including their system tray instances, before changing the configuration.": "Перед изменением конфигурации полностью закройте Codex и ChatGPT, включая их экземпляры в системном трее.",
     "Function calling": "Вызов функций",
     "Functions": "Функции",
     "GC Count": "Кол-во GC",

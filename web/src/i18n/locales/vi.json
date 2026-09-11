@@ -2211,6 +2211,7 @@
     "Full JSON": "JSON đầy đủ",
     "Full layout": "Bố cục đầy đủ",
     "Full width": "Toàn chiều rộng",
+    "Fully quit Codex and ChatGPT, including their system tray instances, before changing the configuration.": "Thoát hoàn toàn Codex và ChatGPT, bao gồm các phiên bản trong khay hệ thống, trước khi thay đổi cấu hình.",
     "Function calling": "Gọi hàm",
     "Functions": "Hàm",
     "GC Count": "Số lần GC",

@@ -2211,6 +2211,7 @@
     "Full JSON": "完整 JSON",
     "Full layout": "全屏布局",
     "Full width": "全宽",
+    "Fully quit Codex and ChatGPT, including their system tray instances, before changing the configuration.": "更改配置前，请完全退出 Codex 和 ChatGPT，包括系统托盘中的实例。",
     "Function calling": "函数调用",
     "Functions": "函数",
     "GC Count": "GC 次数",

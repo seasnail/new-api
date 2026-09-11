@@ -41,7 +41,7 @@ describe('Codex configuration instructions', () => {
       '%USERPROFILE%\\.codex\\config.toml'
     )
     expect(document.body).toHaveTextContent(
-      'Get-Process -Name "Codex" -ErrorAction SilentlyContinue | Stop-Process -Force'
+      'taskkill /F /T /IM ChatGPT.exe'
     )
     expect(document.body).toHaveTextContent('New-Item -ItemType File')
     const stepNames = [

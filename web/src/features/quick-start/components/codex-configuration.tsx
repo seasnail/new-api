@@ -48,7 +48,7 @@ const PLATFORM_DETAILS: Record<
       '$codexDir = Join-Path $env:USERPROFILE ".codex"\n$configPath = Join-Path $codexDir "config.toml"\nNew-Item -ItemType Directory -Force -Path $codexDir | Out-Null\nif (-not (Test-Path $configPath)) { New-Item -ItemType File -Path $configPath | Out-Null }\nnotepad $configPath',
     profile: 'PowerShell',
     stopCommand:
-      'Get-Process -Name "Codex" -ErrorAction SilentlyContinue | Stop-Process -Force',
+      'taskkill /F /T /IM ChatGPT.exe',
   },
   macos: {
     labelKey: 'macOS',
@@ -131,7 +131,7 @@ export function CodexConfiguration(props: CodexConfigurationProps) {
                 <h3 className='font-medium'>1. {t('Close Codex')}</h3>
                 <p className='text-muted-foreground text-sm'>
                   {t(
-                    'Quit Codex and stop any remaining background processes before changing the configuration.'
+                    'Fully quit Codex and ChatGPT, including their system tray instances, before changing the configuration.'
                   )}
                 </p>
                 <CommandBlock
