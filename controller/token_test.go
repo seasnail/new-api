@@ -16,6 +16,8 @@ import (
 	"github.com/QuantumNous/new-api/model"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -455,6 +457,36 @@ func TestGetAllTokensMasksKeyInResponse(t *testing.T) {
 	if strings.Contains(recorder.Body.String(), token.Key) {
 		t.Fatalf("list response leaked raw token key: %s", recorder.Body.String())
 	}
+}
+
+func TestAddTokenReturnsFullKeyOnce(t *testing.T) {
+	db := setupTokenControllerTestDB(t)
+	body := map[string]any{
+		"name":                 "quick-start-token",
+		"expired_time":         -1,
+		"remain_quota":         0,
+		"unlimited_quota":      true,
+		"model_limits_enabled": false,
+		"model_limits":         "",
+		"group":                "",
+		"cross_group_retry":    false,
+	}
+
+	ctx, recorder := newAuthenticatedContext(t, http.MethodPost, "/api/token/", body, 1)
+	AddToken(ctx)
+
+	response := decodeAPIResponse(t, recorder)
+	require.True(t, response.Success, response.Message)
+
+	var created tokenResponseItem
+	require.NoError(t, common.Unmarshal(response.Data, &created))
+	require.NotZero(t, created.ID)
+	require.NotEmpty(t, created.Key)
+	assert.NotContains(t, created.Key, "*")
+
+	var stored model.Token
+	require.NoError(t, db.First(&stored, created.ID).Error)
+	assert.Equal(t, stored.Key, created.Key)
 }
 
 func TestSearchTokensMasksKeyInResponse(t *testing.T) {

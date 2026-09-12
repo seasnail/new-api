@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown, KeyRound, Settings2, WalletCards } from 'lucide-react'
+import { ChevronDown, KeyRound, Settings2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm, type SubmitErrorHandler } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -77,7 +77,6 @@ import { cn } from '@/lib/utils'
 
 import {
   createApiKey,
-  getApiKeys,
   updateApiKey,
   getApiKey,
   getTokenAutoGroups,
@@ -119,15 +118,25 @@ export function ApiKeysMutateDrawer({
   const { triggerRefresh } = useApiKeys()
   const { status, loading: statusLoading } = useStatus()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [advancedOpen, setAdvancedOpen] = useState(isUpdate)
   const [initializedTarget, setInitializedTarget] = useState<string | null>(
     null
   )
   const defaultUseAutoGroup = status?.default_use_auto_group === true
-  const forceDefaultGroup = embedded && !isUpdate
+  const forceDefaultGroup = true
+
+  useEffect(() => {
+    if (open) {
+      setAdvancedOpen(isUpdate)
+    }
+  }, [open, currentRowId, isUpdate])
 
   // Fetch models
-  const { data: modelsData } = useQuery({
+  const {
+    data: modelsData,
+    isFetched: modelsFetched,
+    isFetching: modelsFetching,
+  } = useQuery({
     queryKey: ['user-models'],
     queryFn: () => getUserModels(),
     enabled: open,
@@ -168,7 +177,7 @@ export function ApiKeysMutateDrawer({
     staleTime: 0,
   })
 
-  const models = modelsData?.data || []
+  const models = useMemo(() => modelsData?.data || [], [modelsData])
   const groups = useMemo<ApiKeyGroupOption[]>(
     () =>
       Object.entries(groupsData?.data || {}).map(([key, info]) => ({
@@ -223,6 +232,8 @@ export function ApiKeysMutateDrawer({
     if (
       !groupsFetched ||
       groupsFetching ||
+      !modelsFetched ||
+      modelsFetching ||
       !autoGroupsFetched ||
       autoGroupsFetching
     ) {
@@ -235,21 +246,26 @@ export function ApiKeysMutateDrawer({
     if (initializedTarget === target) return
     if (isUpdate && currentRow) {
       if (apiKeyData?.success && apiKeyData.data) {
-        form.reset(
-          transformApiKeyToFormDefaults(
-            apiKeyData.data,
-            availableAutoGroupNames,
-            maxAutoGroups
-          )
+        const defaults = transformApiKeyToFormDefaults(
+          apiKeyData.data,
+          availableAutoGroupNames,
+          maxAutoGroups
         )
+        form.reset({
+          ...defaults,
+          model_limits: apiKeyData.data.model_limits_enabled
+            ? defaults.model_limits
+            : models,
+        })
         setInitializedTarget(target)
       }
     } else {
-      form.reset(
-        getApiKeyFormDefaultValues(
+      form.reset({
+        ...getApiKeyFormDefaultValues(
           forceDefaultGroup ? false : defaultUseAutoGroup && backendHasAuto
-        )
-      )
+        ),
+        model_limits: models,
+      })
       setInitializedTarget(target)
     }
   }, [
@@ -263,6 +279,9 @@ export function ApiKeysMutateDrawer({
     backendHasAuto,
     groupsFetched,
     groupsFetching,
+    models,
+    modelsFetched,
+    modelsFetching,
     autoGroupsFetched,
     autoGroupsFetching,
     apiKeyData,
@@ -325,6 +344,7 @@ export function ApiKeysMutateDrawer({
         // Create mode - handle batch creation
         const count = data.tokenCount || 1
         let successCount = 0
+        let firstCreatedKey: ApiKey | undefined
 
         for (let i = 0; i < count; i++) {
           const result = await createApiKey({
@@ -335,6 +355,7 @@ export function ApiKeysMutateDrawer({
                 : `${data.name || 'default'}-${Math.random().toString(36).slice(2, 8)}`,
           })
           if (result.success) {
+            firstCreatedKey ??= result.data
             successCount++
           } else {
             toast.error(result.message || t(ERROR_MESSAGES.CREATE_FAILED))
@@ -343,20 +364,15 @@ export function ApiKeysMutateDrawer({
         }
 
         if (successCount > 0) {
-          const newestKeyResult = onCreated
-            ? await getApiKeys({ p: 1, size: 1 })
-            : null
-          const newestKey = newestKeyResult?.data?.items[0]
-
           toast.success(
             t('Successfully created {{count}} API Key(s)', {
               count: successCount,
             })
           )
-          if (newestKey) {
-            onCreated?.(newestKey)
+          if (firstCreatedKey) {
+            onCreated?.(firstCreatedKey)
           } else if (onCreated) {
-            toast.error(newestKeyResult?.message || t('Failed to load API key'))
+            toast.error(t('Failed to load API key'))
           }
           if (!embedded) {
             onOpenChange(false)
@@ -533,65 +549,6 @@ export function ApiKeysMutateDrawer({
             />
           )}
 
-          <FormField
-            control={form.control}
-            name='expired_time'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('Expiration Time')}</FormLabel>
-                <div className='grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center'>
-                  <FormControl>
-                    <DateTimePicker
-                      value={field.value}
-                      onChange={field.onChange}
-                      placeholder={t('Never expires')}
-                      className='min-w-0 [&_input[type=time]]:w-24 sm:[&_input[type=time]]:w-32'
-                    />
-                  </FormControl>
-                  <div className='grid grid-cols-4 gap-2 sm:flex'>
-                    <Button
-                      type='button'
-                      variant='outline'
-                      size='sm'
-                      className='px-2 text-xs sm:px-3 sm:text-sm'
-                      onClick={() => handleSetExpiry(0, 0, 0)}
-                    >
-                      {t('Never')}
-                    </Button>
-                    <Button
-                      type='button'
-                      variant='outline'
-                      size='sm'
-                      className='px-2 text-xs sm:px-3 sm:text-sm'
-                      onClick={() => handleSetExpiry(1, 0, 0)}
-                    >
-                      {t('1 Month')}
-                    </Button>
-                    <Button
-                      type='button'
-                      variant='outline'
-                      size='sm'
-                      className='px-2 text-xs sm:px-3 sm:text-sm'
-                      onClick={() => handleSetExpiry(0, 1, 0)}
-                    >
-                      {t('1 Day')}
-                    </Button>
-                    <Button
-                      type='button'
-                      variant='outline'
-                      size='sm'
-                      className='px-2 text-xs sm:px-3 sm:text-sm'
-                      onClick={() => handleSetExpiry(0, 0, 1)}
-                    >
-                      {t('1 Hour')}
-                    </Button>
-                  </div>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
           {!isUpdate && (
             <FormField
               control={form.control}
@@ -620,65 +577,28 @@ export function ApiKeysMutateDrawer({
               )}
             />
           )}
-        </SideDrawerSection>
-
-        <SideDrawerSection>
-          <SideDrawerSectionHeader
-            title={t('Quota Settings')}
-            description={t('Set quota amount and limits')}
-            icon={<WalletCards className='size-4' />}
-            iconTone='success'
-          />
-          {!unlimitedQuota && (
-            <FormField
-              control={form.control}
-              name='remain_quota_dollars'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{quotaLabel}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type='number'
-                      step={tokensOnly ? 1 : 0.01}
-                      placeholder={quotaPlaceholder}
-                      onChange={(e) =>
-                        field.onChange(Number.parseFloat(e.target.value) || 0)
-                      }
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {tokensOnly
-                      ? t('Enter the quota amount in tokens')
-                      : t('Enter the quota amount in {{currency}}', {
-                          currency: currencyLabel,
-                        })}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
 
           <FormField
             control={form.control}
-            name='unlimited_quota'
+            name='model_limits'
             render={({ field }) => (
-              <FormItem className={sideDrawerSwitchItemClassName()}>
-                <div className='flex flex-col gap-0.5'>
-                  <FormLabel className='text-sm'>
-                    {t('Unlimited Quota')}
-                  </FormLabel>
-                  <FormDescription className='text-xs'>
-                    {t('Enable unlimited quota for this API key')}
-                  </FormDescription>
-                </div>
+              <FormItem>
+                <FormLabel>{t('Available Model List')}</FormLabel>
                 <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
+                  <MultiSelect
+                    options={models.map((m) => ({
+                      label: m,
+                      value: m,
+                    }))}
+                    selected={field.value}
+                    onChange={field.onChange}
+                    placeholder={t('Select models (empty for allow all)')}
                   />
                 </FormControl>
+                <FormDescription>
+                  {t('Limit which models can be used with this key')}
+                </FormDescription>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -711,24 +631,114 @@ export function ApiKeysMutateDrawer({
               <div className='flex flex-col gap-4 pt-2'>
                 <FormField
                   control={form.control}
-                  name='model_limits'
+                  name='unlimited_quota'
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('Model Limits')}</FormLabel>
+                    <FormItem className={sideDrawerSwitchItemClassName()}>
+                      <div className='flex flex-col gap-0.5'>
+                        <FormLabel className='text-sm'>
+                          {t('Unlimited Quota')}
+                        </FormLabel>
+                        <FormDescription className='text-xs'>
+                          {t('Enable unlimited quota for this API key')}
+                        </FormDescription>
+                      </div>
                       <FormControl>
-                        <MultiSelect
-                          options={models.map((m) => ({
-                            label: m,
-                            value: m,
-                          }))}
-                          selected={field.value}
-                          onChange={field.onChange}
-                          placeholder={t('Select models (empty for allow all)')}
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
                         />
                       </FormControl>
-                      <FormDescription>
-                        {t('Limit which models can be used with this key')}
-                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+
+                {!unlimitedQuota && (
+                  <FormField
+                    control={form.control}
+                    name='remain_quota_dollars'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{quotaLabel}</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type='number'
+                            step={tokensOnly ? 1 : 0.01}
+                            placeholder={quotaPlaceholder}
+                            onChange={(e) =>
+                              field.onChange(
+                                Number.parseFloat(e.target.value) || 0
+                              )
+                            }
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {tokensOnly
+                            ? t('Enter the quota amount in tokens')
+                            : t('Enter the quota amount in {{currency}}', {
+                                currency: currencyLabel,
+                              })}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                <FormField
+                  control={form.control}
+                  name='expired_time'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Expiration Time')}</FormLabel>
+                      <div className='grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center'>
+                        <FormControl>
+                          <DateTimePicker
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder={t('Never expires')}
+                            className='min-w-0 [&_input[type=time]]:w-24 sm:[&_input[type=time]]:w-32'
+                          />
+                        </FormControl>
+                        <div className='grid grid-cols-4 gap-2 sm:flex'>
+                          <Button
+                            type='button'
+                            variant='outline'
+                            size='sm'
+                            className='px-2 text-xs sm:px-3 sm:text-sm'
+                            onClick={() => handleSetExpiry(0, 0, 0)}
+                          >
+                            {t('Never')}
+                          </Button>
+                          <Button
+                            type='button'
+                            variant='outline'
+                            size='sm'
+                            className='px-2 text-xs sm:px-3 sm:text-sm'
+                            onClick={() => handleSetExpiry(1, 0, 0)}
+                          >
+                            {t('1 Month')}
+                          </Button>
+                          <Button
+                            type='button'
+                            variant='outline'
+                            size='sm'
+                            className='px-2 text-xs sm:px-3 sm:text-sm'
+                            onClick={() => handleSetExpiry(0, 1, 0)}
+                          >
+                            {t('1 Day')}
+                          </Button>
+                          <Button
+                            type='button'
+                            variant='outline'
+                            size='sm'
+                            className='px-2 text-xs sm:px-3 sm:text-sm'
+                            onClick={() => handleSetExpiry(0, 0, 1)}
+                          >
+                            {t('1 Hour')}
+                          </Button>
+                        </div>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}

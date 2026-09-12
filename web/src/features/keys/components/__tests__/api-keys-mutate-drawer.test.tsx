@@ -53,7 +53,7 @@ function installApiFixtures(createdPayloads: Array<Record<string, unknown>>) {
       case '/api/status':
         return { data: { data: { default_use_auto_group: true } } }
       case '/api/user/models':
-        return { data: { success: true, data: [] } }
+        return { data: { success: true, data: ['gpt-4o', 'claude-sonnet'] } }
       case '/api/user/self/groups':
         return {
           data: {
@@ -70,6 +70,30 @@ function installApiFixtures(createdPayloads: Array<Record<string, unknown>>) {
           data: {
             success: true,
             data: { groups: ['vip', 'default'], max_count: 3 },
+          },
+        }
+      case '/api/token/42':
+        return {
+          data: {
+            success: true,
+            data: {
+              id: 42,
+              name: 'existing-key',
+              key: 'existing-key-value',
+              status: 1,
+              remain_quota: 0,
+              used_quota: 0,
+              unlimited_quota: true,
+              expired_time: -1,
+              created_time: 1,
+              accessed_time: 1,
+              group: '',
+              auto_groups: null,
+              cross_group_retry: false,
+              model_limits_enabled: false,
+              model_limits: '',
+              allow_ips: '',
+            },
           },
         }
       case '/api/token/?p=1&size=1':
@@ -110,14 +134,30 @@ function installApiFixtures(createdPayloads: Array<Record<string, unknown>>) {
   apiClient.post = async (url, data) => {
     expect(url).toBe('/api/token/')
     expect(data && typeof data === 'object').toBeTruthy()
-    createdPayloads.push(data as Record<string, unknown>)
-    return { data: { success: true, data: {} } }
+    const payload = data as Record<string, unknown>
+    createdPayloads.push(payload)
+    return {
+      data: {
+        success: true,
+        data: {
+          ...payload,
+          id: 42,
+          key: 'plain-created-key',
+          status: 1,
+          used_quota: 0,
+          created_time: 1,
+          accessed_time: 1,
+          auto_groups: null,
+        },
+      },
+    }
   }
 }
 
 async function renderCreateDrawer(options?: {
   embedded?: boolean
   onCreated?: (apiKey: import('../../types').ApiKey) => void
+  currentRow?: import('../../types').ApiKey
 }): Promise<void> {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -130,7 +170,7 @@ async function renderCreateDrawer(options?: {
   )
   queryClient.setQueryData(
     ['user-models'],
-    { success: true, data: [] },
+    { success: true, data: ['gpt-4o', 'claude-sonnet'] },
     { updatedAt: freshAt }
   )
   queryClient.setQueryData(
@@ -162,6 +202,7 @@ async function renderCreateDrawer(options?: {
           <ApiKeysMutateDrawer
             open
             embedded={options?.embedded}
+            currentRow={options?.currentRow}
             onOpenChange={() => undefined}
             onCreated={options?.onCreated}
           />
@@ -194,8 +235,6 @@ function findButton(text: string, required = true): HTMLButtonElement | null {
 }
 
 function getControlByLabel(labelText: 'Name' | 'Quantity'): HTMLInputElement
-function getControlByLabel(labelText: 'Group'): HTMLButtonElement
-function getControlByLabel(labelText: 'Auto group order'): HTMLElement
 function getControlByLabel(labelText: string): HTMLElement {
   const label = [...document.querySelectorAll<HTMLLabelElement>('label')].find(
     (candidate) => candidate.textContent?.trim() === labelText
@@ -221,20 +260,6 @@ function changeInput(input: HTMLInputElement, value: string): void {
   fireEvent.input(input, { target: { value } })
 }
 
-function selectComboboxOption(
-  trigger: HTMLButtonElement,
-  optionDescription: string
-): void {
-  fireEvent.click(trigger)
-  const option = [
-    ...document.querySelectorAll<HTMLElement>('[data-slot="command-item"]'),
-  ].find((candidate) => candidate.textContent?.includes(optionDescription))
-  if (!option) {
-    throw new Error(`Expected option containing "${optionDescription}"`)
-  }
-  fireEvent.click(option)
-}
-
 afterEach(() => {
   apiClient.get = originalGet
   apiClient.post = originalPost
@@ -245,7 +270,7 @@ afterEach(() => {
   }
 })
 
-describe('API keys mutate drawer Auto group integration', () => {
+describe('API keys mutate drawer create group behavior', () => {
   test('renders the create form as an embedded panel and reports the created key', async () => {
     const createdPayloads: Array<Record<string, unknown>> = []
     const onCreated = vi.fn()
@@ -254,8 +279,51 @@ describe('API keys mutate drawer Auto group integration', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByText('Basic Information')).toBeInTheDocument()
-    expect(screen.getByText('Quota Settings')).toBeInTheDocument()
+    expect(screen.queryByText('Quota Settings')).not.toBeInTheDocument()
     expect(screen.getByText('Advanced Settings')).toBeInTheDocument()
+    expect(screen.getByText('Available Model List')).toBeVisible()
+    expect(screen.getByText('gpt-4o')).toBeVisible()
+    expect(screen.getByText('claude-sonnet')).toBeVisible()
+    const advancedTrigger = screen.getByRole('button', {
+      name: /Advanced Settings/,
+    })
+    expect(advancedTrigger).toHaveAttribute('aria-expanded', 'false')
+    expect(
+      screen.queryByText('IP Whitelist (supports CIDR)')
+    ).not.toBeInTheDocument()
+    fireEvent.click(advancedTrigger)
+    expect(advancedTrigger).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('IP Whitelist (supports CIDR)')).toBeVisible()
+    const quantityLabel = screen.getByText('Quantity', { selector: 'label' })
+    const modelLimitsLabel = screen.getByText('Available Model List', {
+      selector: 'label',
+    })
+    const advancedHeading = screen.getByText('Advanced Settings')
+    const expirationLabel = screen.getByText('Expiration Time', {
+      selector: 'label',
+    })
+    expect(
+      quantityLabel.compareDocumentPosition(modelLimitsLabel) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).not.toBe(0)
+    expect(
+      advancedHeading.compareDocumentPosition(expirationLabel) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).not.toBe(0)
+
+    const unlimitedQuotaSwitch = screen.getByRole('switch', {
+      name: 'Unlimited Quota',
+    })
+    expect(
+      advancedHeading.compareDocumentPosition(unlimitedQuotaSwitch) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).not.toBe(0)
+    fireEvent.click(unlimitedQuotaSwitch)
+    const quotaLabel = screen.getByText(/Quota \(/, { selector: 'label' })
+    expect(
+      unlimitedQuotaSwitch.compareDocumentPosition(quotaLabel) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).not.toBe(0)
     expect(
       screen.queryByRole('button', { name: 'Group' })
     ).not.toBeInTheDocument()
@@ -272,31 +340,39 @@ describe('API keys mutate drawer Auto group integration', () => {
     expect(onCreated.mock.calls[0]?.[0]).toMatchObject({
       id: 42,
       name: 'onboarding-key',
+      key: 'plain-created-key',
     })
     expect(createdPayloads).toHaveLength(1)
     expect(createdPayloads[0]?.group).toBe('')
+    expect(createdPayloads[0]?.model_limits_enabled).toBe(true)
+    expect(createdPayloads[0]?.model_limits).toBe('gpt-4o,claude-sonnet')
     expect(createdPayloads[0]?.auto_groups).toEqual([])
     expect(createdPayloads[0]?.cross_group_retry).toBe(false)
   })
 
-  test('inherits the root Auto order and sends an empty override for every batch-created key', async () => {
+  test('hides group selection and uses the default group for every batch-created key', async () => {
     const createdPayloads: Array<Record<string, unknown>> = []
     installApiFixtures(createdPayloads)
     await renderCreateDrawer()
 
-    const groupTrigger = getControlByLabel('Group')
-    expect(groupTrigger.textContent?.includes('auto')).toBe(true)
     expect(
-      document.body.textContent?.includes(
-        'Using the complete global Auto order (2 groups)'
+      [...document.querySelectorAll('label')].some(
+        (label) => label.textContent?.trim() === 'Group'
       )
-    ).toBe(true)
-    expect(
-      [
-        ...document.querySelectorAll('[data-slot="global-auto-order-name"]'),
-      ].map((item) => item.textContent)
-    ).toEqual(['vip', 'default'])
-    expect(findButton('Restore global Auto', true).disabled).toBe(true)
+    ).toBe(false)
+    expect(screen.queryByRole('button', { name: 'Group' })).toBeNull()
+    expect(document.body.textContent).not.toContain('Auto group order')
+
+    const modelChip = [
+      ...document.querySelectorAll<HTMLElement>('[data-slot="combobox-chip"]'),
+    ].find((item) => item.textContent?.includes('gpt-4o'))
+    const removeModelButton = modelChip?.querySelector<HTMLButtonElement>(
+      '[data-slot="combobox-chip-remove"]'
+    )
+    if (!removeModelButton) {
+      throw new Error('Expected gpt-4o remove button')
+    }
+    fireEvent.click(removeModelButton)
 
     changeInput(getControlByLabel('Name'), 'batch')
     changeInput(getControlByLabel('Quantity'), '2')
@@ -306,50 +382,47 @@ describe('API keys mutate drawer Auto group integration', () => {
     expect(createdPayloads.length).toBe(2)
     expect(createdPayloads[0]?.name).toBe('batch')
     for (const payload of createdPayloads) {
-      expect(payload.group).toBe('auto')
+      expect(payload.group).toBe('')
       expect(payload.auto_groups).toEqual([])
-      expect(payload.cross_group_retry).toBe(true)
+      expect(payload.cross_group_retry).toBe(false)
+      expect(payload.model_limits_enabled).toBe(true)
+      expect(payload.model_limits).toBe('claude-sonnet')
     }
   })
 
-  test('preserves an unsaved custom order and mode after Auto to ordinary to Auto changes', async () => {
-    const createdPayloads: Array<Record<string, unknown>> = []
-    installApiFixtures(createdPayloads)
-    await renderCreateDrawer()
+  test('expands advanced settings by default when editing an API key', async () => {
+    installApiFixtures([])
+    await renderCreateDrawer({
+      currentRow: {
+        id: 42,
+        name: 'existing-key',
+        key: 'existing-key-value',
+        status: 1,
+        remain_quota: 0,
+        used_quota: 0,
+        unlimited_quota: true,
+        expired_time: -1,
+        created_time: 1,
+        accessed_time: 1,
+        group: '',
+        auto_groups: null,
+        cross_group_retry: false,
+        model_limits_enabled: false,
+        model_limits: '',
+        allow_ips: '',
+      },
+    })
 
-    const autoOrderControl = getControlByLabel('Auto group order')
-    const addGroupTrigger = autoOrderControl.querySelector<HTMLButtonElement>(
-      'button[role="combobox"]'
-    )
-    if (!addGroupTrigger) {
-      throw new Error('Expected Auto group order combobox')
-    }
-    selectComboboxOption(addGroupTrigger, 'Priority access')
-
+    const advancedTrigger = screen.getByRole('button', {
+      name: /Advanced Settings/,
+    })
+    expect(advancedTrigger).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('Expiration Time')).toBeVisible()
+    expect(screen.getByText('Unlimited Quota')).toBeVisible()
     expect(
-      document.querySelector('button[aria-label="Remove vip"]')
-    ).toBeTruthy()
-    expect(document.body.textContent?.includes('1 / 3 groups selected')).toBe(
-      true
-    )
-    expect(findButton('Restore global Auto', true).disabled).toBe(false)
-
-    const groupTrigger = getControlByLabel('Group')
-    selectComboboxOption(groupTrigger, 'Standard access')
-    expect(document.querySelector('button[aria-label="Remove vip"]')).toBe(null)
-    selectComboboxOption(groupTrigger, 'Automatic routing')
-
-    expect(
-      document.querySelector('button[aria-label="Remove vip"]')
-    ).toBeTruthy()
-    expect(document.body.textContent?.includes('1 / 3 groups selected')).toBe(
-      true
-    )
-    expect(findButton('Restore global Auto', true).disabled).toBe(false)
-
-    changeInput(getControlByLabel('Name'), 'custom')
-    fireEvent.click(findButton('Save changes', true))
-    await waitFor(() => expect(createdPayloads).toHaveLength(1))
-    expect(createdPayloads[0]?.auto_groups).toEqual(['vip'])
+      [...document.querySelectorAll('label')].some(
+        (label) => label.textContent?.trim() === 'Group'
+      )
+    ).toBe(false)
   })
 })

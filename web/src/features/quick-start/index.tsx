@@ -68,6 +68,7 @@ type QuickStartProps = {
 export function QuickStart(props: QuickStartProps) {
   const { t } = useTranslation()
   const [selectedModelName, setSelectedModelName] = useState('')
+  const [createdApiKey, setCreatedApiKey] = useState<ApiKey>()
   const configuredStepActive =
     props.step !== 'key' && props.tokenId !== undefined
   const codexStepActive = props.step === 'codex' && configuredStepActive
@@ -77,7 +78,9 @@ export function QuickStart(props: QuickStartProps) {
     queryFn: () => getApiKey(props.tokenId ?? 0),
     enabled: configuredStepActive,
   })
-  const apiKey = apiKeyQuery.data?.data
+  const fetchedApiKey = apiKeyQuery.data?.data
+  const apiKey =
+    createdApiKey?.id === props.tokenId ? createdApiKey : fetchedApiKey
 
   const modelNamesQuery = useQuery({
     queryKey: ['quick-start', 'models', apiKey?.group],
@@ -111,6 +114,7 @@ export function QuickStart(props: QuickStartProps) {
   )
 
   const handleCreated = (createdKey: ApiKey) => {
+    setCreatedApiKey(createdKey)
     props.onTokenCreated(createdKey.id)
   }
 
@@ -183,7 +187,7 @@ export function QuickStart(props: QuickStartProps) {
           </CardContent>
         </Card>
 
-        {selectedModel && (
+        {selectedModel && apiKey && (
           <Card>
             <CardHeader>
               <CardTitle className='font-mono'>
@@ -194,6 +198,9 @@ export function QuickStart(props: QuickStartProps) {
             <CardContent>
               <ModelDetailsApi
                 model={selectedModel}
+                apiKey={
+                  apiKey.key.startsWith('sk-') ? apiKey.key : `sk-${apiKey.key}`
+                }
                 endpointMap={
                   pricing.endpointMap as Record<
                     string,

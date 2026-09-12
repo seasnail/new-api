@@ -63,6 +63,11 @@ bun run dev --port 5173
 
 
 ## All in one
+
+
+Get-NetTCPConnection -LocalPort 3000,5173 -State Listen |
+  Select-Object -ExpandProperty OwningProcess -Unique |
+  ForEach-Object { Stop-Process -Id $_ -Force }
 ```
 cd web
 bun run build   

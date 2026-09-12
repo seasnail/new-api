@@ -77,6 +77,7 @@ const LANG_HIGHLIGHT: Record<Lang, BundledLanguage> = {
 type SampleContext = {
   baseUrl: string
   apiKeyEnv: string
+  apiKey?: string
   modelName: string
   endpointType: string
   endpointPath: string
@@ -107,9 +108,9 @@ function buildChatSample(lang: Lang, ctx: SampleContext): string {
   if (lang === 'curl') {
     return [
       `curl ${url} \\`,
-      `  -H "Authorization: Bearer $${ctx.apiKeyEnv}" \\`,
+      `  -H "Authorization: Bearer ${ctx.apiKey ?? `$${ctx.apiKeyEnv}`}" \\`,
       `  -H "Content-Type: application/json" \\`,
-      `  -d '${bodyJson.replace(/\n/g, '\n     ')}'`,
+      `  -d '${bodyJson.replaceAll('\n', '\n     ')}'`,
     ].join('\n')
   }
 
@@ -174,10 +175,10 @@ function buildAnthropicSample(lang: Lang, ctx: SampleContext): string {
     )
     return [
       `curl ${url} \\`,
-      `  -H "x-api-key: $${ctx.apiKeyEnv}" \\`,
+      `  -H "x-api-key: ${ctx.apiKey ?? `$${ctx.apiKeyEnv}`}" \\`,
       `  -H "anthropic-version: 2023-06-01" \\`,
       `  -H "Content-Type: application/json" \\`,
-      `  -d '${body.replace(/\n/g, '\n     ')}'`,
+      `  -d '${body.replaceAll('\n', '\n     ')}'`,
     ].join('\n')
   }
   if (lang === 'python') {
@@ -237,7 +238,7 @@ function buildAnthropicSample(lang: Lang, ctx: SampleContext): string {
 }
 
 function buildGeminiSample(lang: Lang, ctx: SampleContext): string {
-  const url = `${ctx.baseUrl}${ctx.endpointPath}?key=$${ctx.apiKeyEnv}`
+  const url = `${ctx.baseUrl}${ctx.endpointPath}?key=${ctx.apiKey ?? `$${ctx.apiKeyEnv}`}`
   const userMessage = 'Explain quantum entanglement in one paragraph.'
 
   if (lang === 'curl') {
@@ -249,7 +250,7 @@ function buildGeminiSample(lang: Lang, ctx: SampleContext): string {
     return [
       `curl '${url}' \\`,
       `  -H 'Content-Type: application/json' \\`,
-      `  -d '${body.replace(/\n/g, '\n     ')}'`,
+      `  -d '${body.replaceAll('\n', '\n     ')}'`,
     ].join('\n')
   }
   if (lang === 'python') {
@@ -297,9 +298,9 @@ function buildEmbeddingSample(lang: Lang, ctx: SampleContext): string {
     const body = JSON.stringify({ model: ctx.modelName, input: text }, null, 2)
     return [
       `curl ${url} \\`,
-      `  -H "Authorization: Bearer $${ctx.apiKeyEnv}" \\`,
+      `  -H "Authorization: Bearer ${ctx.apiKey ?? `$${ctx.apiKeyEnv}`}" \\`,
       `  -H "Content-Type: application/json" \\`,
-      `  -d '${body.replace(/\n/g, '\n     ')}'`,
+      `  -d '${body.replaceAll('\n', '\n     ')}'`,
     ].join('\n')
   }
   if (lang === 'python') {
@@ -363,9 +364,9 @@ function buildImageSample(lang: Lang, ctx: SampleContext): string {
     )
     return [
       `curl ${url} \\`,
-      `  -H "Authorization: Bearer $${ctx.apiKeyEnv}" \\`,
+      `  -H "Authorization: Bearer ${ctx.apiKey ?? `$${ctx.apiKeyEnv}`}" \\`,
       `  -H "Content-Type: application/json" \\`,
-      `  -d '${body.replace(/\n/g, '\n     ')}'`,
+      `  -d '${body.replaceAll('\n', '\n     ')}'`,
     ].join('\n')
   }
   if (lang === 'python') {
@@ -430,8 +431,9 @@ function buildSample(
 ): string {
   if (endpointType === 'anthropic') return buildAnthropicSample(lang, ctx)
   if (endpointType === 'gemini') return buildGeminiSample(lang, ctx)
-  if (endpointType === 'embeddings' || endpointType === 'jina-rerank')
+  if (endpointType === 'embeddings' || endpointType === 'jina-rerank') {
     return buildEmbeddingSample(lang, ctx)
+  }
   if (endpointType === 'image-generation') return buildImageSample(lang, ctx)
   return buildChatSample(lang, ctx)
 }
@@ -443,6 +445,7 @@ function buildSample(
 function CodeSamplesSection(props: {
   model: PricingModel
   endpointMap: Record<string, { path?: string; method?: string }>
+  apiKey?: string
 }) {
   const { t } = useTranslation()
   const { status } = useStatus()
@@ -490,6 +493,7 @@ function CodeSamplesSection(props: {
   const code = buildSample(lang, activeEndpoint.type, {
     baseUrl,
     apiKeyEnv: 'NEW_API_KEY',
+    apiKey: props.apiKey,
     modelName: props.model.model_name || '',
     endpointType: activeEndpoint.type,
     endpointPath: activeEndpoint.path,
@@ -537,13 +541,15 @@ function CodeSamplesSection(props: {
         </CodeBlock>
       </div>
 
-      <p className='text-muted-foreground mt-2 text-xs'>
-        {t('Replace')}{' '}
-        <code className='bg-muted rounded px-1 py-0.5 font-mono text-[11px]'>
-          {'<YOUR_API_KEY>'}
-        </code>{' '}
-        {t('with the API key from your token settings.')}
-      </p>
+      {!props.apiKey && (
+        <p className='text-muted-foreground mt-2 text-xs'>
+          {t('Replace')}{' '}
+          <code className='bg-muted rounded px-1 py-0.5 font-mono text-[11px]'>
+            {'<YOUR_API_KEY>'}
+          </code>{' '}
+          {t('with the API key from your token settings.')}
+        </p>
+      )}
     </section>
   )
 }
@@ -761,10 +767,15 @@ function AuthSection() {
 export function ModelDetailsApi(props: {
   model: PricingModel
   endpointMap: Record<string, { path?: string; method?: string }>
+  apiKey?: string
 }) {
   return (
     <div className='space-y-6'>
-      <CodeSamplesSection model={props.model} endpointMap={props.endpointMap} />
+      <CodeSamplesSection
+        model={props.model}
+        endpointMap={props.endpointMap}
+        apiKey={props.apiKey}
+      />
       <AuthSection />
       <SupportedParametersSection model={props.model} />
       <RateLimitsSection model={props.model} />
