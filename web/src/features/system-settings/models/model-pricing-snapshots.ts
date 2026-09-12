@@ -48,6 +48,39 @@ export type ModelPricingSnapshot = {
   billingExpr?: string
   requestRuleExpr?: string
   hasConflict: boolean
+  completionMeta?: CompletionRatioMeta
+}
+
+export type CompletionRatioMeta = {
+  ratio: number
+  locked: boolean
+  default_ratio?: number
+}
+
+// Legacy storage uses ratios; the editor presents their effective dollar prices.
+// Never treat missing prices as zero or assume a fixed rate for an expression.
+export function getTokenPrices(row: ModelPricingSnapshot) {
+  if (row.billingMode === 'tiered_expr' || row.billingMode === 'per-request') {
+    return { input: null, output: null, cacheRead: null, cacheWrite: null }
+  }
+  const ratio = toNumberOrNull(row.ratio)
+  const input = ratio === null ? null : ratio * 2
+  const completion = row.completionMeta?.locked
+    ? row.completionMeta.ratio
+    : (toNumberOrNull(row.completionRatio) ??
+      row.completionMeta?.default_ratio ??
+      row.completionMeta?.ratio)
+  return {
+    input,
+    output:
+      input === null || completion === undefined ? null : input * completion,
+    cacheRead:
+      input === null ? null : input * (toNumberOrNull(row.cacheRatio) ?? 1),
+    cacheWrite:
+      input === null
+        ? null
+        : input * (toNumberOrNull(row.createCacheRatio) ?? 1.25),
+  }
 }
 
 export type ModelRow = ModelPricingSnapshot & {
@@ -146,16 +179,16 @@ export const getPriceDetail = (
     return t('Fixed request price')
   }
 
-  const inputPrice = ratioToPrice(row.ratio)
-  if (!inputPrice) return t('No base input price')
+  const prices = getTokenPrices(row)
+  if (prices.input === null) return t('No base input price')
 
   const details = [
-    row.completionRatio &&
-      `${t('Output')} $${ratioToPrice(row.completionRatio, inputPrice)}`,
-    row.cacheRatio &&
-      `${t('Cache')} $${ratioToPrice(row.cacheRatio, inputPrice)}`,
-    row.createCacheRatio &&
-      `${t('Cache write')} $${ratioToPrice(row.createCacheRatio, inputPrice)}`,
+    prices.output !== null &&
+      `${t('Output')} $${formatPricingNumber(prices.output)}`,
+    prices.cacheRead !== null &&
+      `${t('Cache')} $${formatPricingNumber(prices.cacheRead)}`,
+    prices.cacheWrite !== null &&
+      `${t('Cache write')} $${formatPricingNumber(prices.cacheWrite)}`,
   ]
     .filter(Boolean)
     .slice(0, 2)
@@ -229,7 +262,7 @@ export const buildModelSnapshots = ({
     ...Object.keys(billingExprMap),
   ])
 
-  return Array.from(modelNames).map((name) => {
+  return [...modelNames].map((name) => {
     const price = priceMap[name]?.toString() || ''
     const ratio = ratioMap[name]?.toString() || ''
     const cache = cacheMap[name]?.toString() || ''

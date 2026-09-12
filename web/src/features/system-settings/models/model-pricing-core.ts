@@ -20,20 +20,37 @@ import * as z from 'zod'
 
 import { combineBillingExpr } from '@/features/pricing/lib/billing-expr'
 
+import {
+  getTokenPrices,
+  type CompletionRatioMeta,
+} from './model-pricing-snapshots'
 import { formatPricingNumber } from './pricing-format'
 
-export const createModelPricingSchema = (t: (key: string) => string) =>
-  z.object({
+export const createModelPricingSchema = (t: (key: string) => string) => {
+  const price = z
+    .string()
+    .optional()
+    .refine(
+      (value) =>
+        value === undefined ||
+        value === '' ||
+        (value.trim() !== '' &&
+          Number.isFinite(Number(value)) &&
+          Number(value) >= 0),
+      t('Please enter a valid non-negative price')
+    )
+  return z.object({
     name: z.string().min(1, t('Model name is required')),
-    price: z.string().optional(),
-    ratio: z.string().optional(),
-    cacheRatio: z.string().optional(),
-    createCacheRatio: z.string().optional(),
-    completionRatio: z.string().optional(),
-    imageRatio: z.string().optional(),
-    audioRatio: z.string().optional(),
-    audioCompletionRatio: z.string().optional(),
+    price,
+    ratio: price,
+    cacheRatio: price,
+    createCacheRatio: price,
+    completionRatio: price,
+    imageRatio: price,
+    audioRatio: price,
+    audioCompletionRatio: price,
   })
+}
 
 export type ModelPricingFormValues = z.infer<
   ReturnType<typeof createModelPricingSchema>
@@ -62,6 +79,7 @@ export type ModelRatioData = {
   billingMode?: PricingMode
   billingExpr?: string
   requestRuleExpr?: string
+  completionMeta?: CompletionRatioMeta
 }
 
 export type PreviewRow = {
@@ -185,7 +203,12 @@ export function createInitialLaneState(data?: ModelRatioData | null) {
   const promptPrice = ratioToBasePrice(data.ratio)
   const audioInputPrice = deriveLanePrice(data.audioRatio, promptPrice)
   const prices: Record<LaneKey, string> = {
-    completion: deriveLanePrice(data.completionRatio, promptPrice),
+    completion: deriveLanePrice(
+      data.completionMeta?.locked
+        ? data.completionMeta.ratio
+        : data.completionRatio,
+      promptPrice
+    ),
     cache: deriveLanePrice(data.cacheRatio, promptPrice),
     createCache: deriveLanePrice(data.createCacheRatio, promptPrice),
     image: deriveLanePrice(data.imageRatio, promptPrice),
@@ -215,7 +238,8 @@ export function buildPreviewRows(
   promptPrice: string,
   lanePrices: Record<LaneKey, string>,
   laneEnabled: Record<LaneKey, boolean>,
-  t: (key: string) => string
+  t: (key: string) => string,
+  completionMeta?: CompletionRatioMeta
 ): PreviewRow[] {
   if (mode === 'tiered_expr') {
     const effectiveExpr = combineBillingExpr(billingExpr, requestRuleExpr)
@@ -240,6 +264,11 @@ export function buildPreviewRows(
     ]
   }
 
+  const prices = getTokenPrices({
+    ...values,
+    hasConflict: false,
+    completionMeta,
+  })
   return [
     {
       key: 'inputPrice',
@@ -250,25 +279,25 @@ export function buildPreviewRows(
       key: 'completion',
       label: t('Completion price'),
       value:
-        laneEnabled.completion && lanePrices.completion
-          ? `$${lanePrices.completion}`
-          : t('Empty'),
+        prices.output === null
+          ? t('Empty')
+          : `$${formatPricingNumber(prices.output)}`,
     },
     {
       key: 'cache',
       label: t('Cache read price'),
       value:
-        laneEnabled.cache && lanePrices.cache
-          ? `$${lanePrices.cache}`
-          : t('Empty'),
+        prices.cacheRead === null
+          ? t('Empty')
+          : `$${formatPricingNumber(prices.cacheRead)}`,
     },
     {
       key: 'createCache',
       label: t('Cache write price'),
       value:
-        laneEnabled.createCache && lanePrices.createCache
-          ? `$${lanePrices.createCache}`
-          : t('Empty'),
+        prices.cacheWrite === null
+          ? t('Empty')
+          : `$${formatPricingNumber(prices.cacheWrite)}`,
     },
     {
       key: 'image',

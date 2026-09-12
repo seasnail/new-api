@@ -86,6 +86,7 @@ import {
   type PricingMode,
 } from './model-pricing-core'
 import { PriceInput, PriceLane } from './model-pricing-inputs'
+import { getTokenPrices } from './model-pricing-snapshots'
 import { formatPricingNumber } from './pricing-format'
 import { TaskUsagePricingEditor } from './task-usage-pricing-editor'
 import { TieredPricingEditor } from './tiered-pricing-editor'
@@ -184,6 +185,11 @@ export const ModelPricingEditorPanel = forwardRef<
     },
   })
   const watchedValues = form.watch()
+  const effectivePrices = getTokenPrices({
+    ...watchedValues,
+    hasConflict: false,
+    completionMeta: editData?.completionMeta,
+  })
   const usageSchemaByModel = useMemo(
     () =>
       new Map(
@@ -342,7 +348,21 @@ export const ModelPricingEditorPanel = forwardRef<
   const handlePromptPriceChange = (value: string) => {
     if (!numericDraftRegex.test(value)) return
     setPromptPrice(value)
-    syncLaneRatios(value, lanePrices, laneEnabled)
+    if (editData?.completionMeta?.locked) {
+      const nextPrices = {
+        ...lanePrices,
+        completion:
+          value === ''
+            ? ''
+            : formatPricingNumber(
+                Number(value) * editData.completionMeta.ratio
+              ),
+      }
+      setLanePrices(nextPrices)
+      syncLaneRatios(value, nextPrices, laneEnabled)
+    } else {
+      syncLaneRatios(value, lanePrices, laneEnabled)
+    }
   }
 
   const handleLanePriceChange = (lane: LaneKey, value: string) => {
@@ -350,7 +370,12 @@ export const ModelPricingEditorPanel = forwardRef<
     const nextLanePrices = { ...lanePrices, [lane]: value }
     setLanePrices(nextLanePrices)
 
-    if (laneEnabled[lane]) {
+    const isPrimaryLane =
+      lane === 'completion' || lane === 'cache' || lane === 'createCache'
+    if (isPrimaryLane) {
+      setLaneEnabled((previous) => ({ ...previous, [lane]: value !== '' }))
+    }
+    if (laneEnabled[lane] || isPrimaryLane) {
       setFormValue(
         ratioFieldByLane[lane],
         deriveLaneRatio(lane, value, promptPrice, nextLanePrices)
@@ -413,7 +438,8 @@ export const ModelPricingEditorPanel = forwardRef<
         promptPrice,
         lanePrices,
         laneEnabled,
-        t
+        t,
+        editData?.completionMeta
       ),
     [
       resolvedBillingExpr,
@@ -424,6 +450,7 @@ export const ModelPricingEditorPanel = forwardRef<
       requestRuleExpr,
       t,
       watchedValues,
+      editData?.completionMeta,
     ]
   )
 
@@ -473,6 +500,39 @@ export const ModelPricingEditorPanel = forwardRef<
   }, [editData, laneEnabled, lanePrices, pricingMode, promptPrice, t])
 
   const validatePricingValues = useCallback(() => {
+    if (pricingMode === 'per-token') {
+      if (hasValue(promptPrice) && toNumberOrNull(promptPrice) === null) {
+        form.setError('ratio', {
+          message: t('Please enter a valid non-negative price'),
+        })
+        return false
+      }
+      const invalidLane = laneConfigs.find(
+        ({ key }) =>
+          laneEnabled[key] &&
+          (toNumberOrNull(lanePrices[key]) === null ||
+            Number(lanePrices[key]) < 0)
+      )
+      if (invalidLane) {
+        form.setError(ratioFieldByLane[invalidLane.key], {
+          message: t('Please enter a valid non-negative price'),
+        })
+        return false
+      }
+      if (
+        Number(promptPrice) === 0 &&
+        laneConfigs.some(
+          ({ key }) => laneEnabled[key] && Number(lanePrices[key]) > 0
+        )
+      ) {
+        form.setError('ratio', {
+          message: t(
+            'Use expression pricing for a zero input price with paid output or cache tokens.'
+          ),
+        })
+        return false
+      }
+    }
     if (
       pricingMode === 'per-token' &&
       toNumberOrNull(promptPrice) === null &&
@@ -513,6 +573,7 @@ export const ModelPricingEditorPanel = forwardRef<
         imageRatio: values.imageRatio || '',
         audioRatio: values.audioRatio || '',
         audioCompletionRatio: values.audioCompletionRatio || '',
+        completionMeta: editData?.completionMeta,
       }
 
       if (pricingMode === 'tiered_expr') {
@@ -522,7 +583,7 @@ export const ModelPricingEditorPanel = forwardRef<
 
       return data
     },
-    [pricingMode, requestRuleExpr, resolvedBillingExpr]
+    [pricingMode, requestRuleExpr, resolvedBillingExpr, editData?.completionMeta]
   )
 
   useImperativeHandle(
@@ -646,9 +707,17 @@ export const ModelPricingEditorPanel = forwardRef<
                         </Alert>
                       )}
                     <FieldGroup className='gap-5'>
-                      <Field>
-                        <FieldLabel>{t('Input price')}</FieldLabel>
+                      <Field
+                        data-invalid={
+                          Boolean(form.formState.errors.ratio) || undefined
+                        }
+                      >
+                        <FieldLabel htmlFor='model-input-price'>
+                          {t('Input price')}
+                        </FieldLabel>
                         <PriceInput
+                          id='model-input-price'
+                          invalid={Boolean(form.formState.errors.ratio)}
                           value={promptPrice}
                           placeholder='3'
                           onChange={handlePromptPriceChange}
@@ -656,33 +725,115 @@ export const ModelPricingEditorPanel = forwardRef<
                         <FieldDescription>
                           {t('USD price per 1M input tokens.')}
                         </FieldDescription>
+                        {form.formState.errors.ratio && (
+                          <p role='alert' className='text-destructive text-sm'>
+                            {form.formState.errors.ratio.message}
+                          </p>
+                        )}
                       </Field>
-
-                      <div className='grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(400px,1fr))]'>
-                        {laneConfigs.map((lane) => {
-                          const disabled =
-                            lane.key === 'audioOutput' &&
-                            (!laneEnabled.audioInput ||
-                              !hasValue(lanePrices.audioInput))
-                          return (
-                            <PriceLane
-                              key={lane.key}
-                              title={t(lane.titleKey)}
-                              description={t(lane.descriptionKey)}
-                              placeholder={lane.placeholder}
-                              value={lanePrices[lane.key]}
-                              enabled={laneEnabled[lane.key]}
-                              disabled={disabled}
-                              onEnabledChange={(checked) =>
-                                handleLaneToggle(lane.key, checked)
+                      {laneConfigs.slice(0, 3).map((lane) => {
+                        const locked =
+                          lane.key === 'completion' &&
+                          editData?.completionMeta?.locked
+                        let effective = effectivePrices.output
+                        if (lane.key === 'cache') {
+                          effective = effectivePrices.cacheRead
+                        }
+                        if (lane.key === 'createCache') {
+                          effective = effectivePrices.cacheWrite
+                        }
+                        const error =
+                          form.formState.errors[ratioFieldByLane[lane.key]]
+                        return (
+                          <Field
+                            key={lane.key}
+                            data-disabled={locked || undefined}
+                            data-invalid={Boolean(error) || undefined}
+                          >
+                            <FieldLabel htmlFor={`model-price-${lane.key}`}>
+                              {t(lane.titleKey)}
+                            </FieldLabel>
+                            <PriceInput
+                              id={`model-price-${lane.key}`}
+                              invalid={Boolean(error)}
+                              value={
+                                locked
+                                  ? formatPricingNumber(effective)
+                                  : lanePrices[lane.key]
                               }
+                              placeholder={
+                                effective === null
+                                  ? t('Not configured')
+                                  : formatPricingNumber(effective)
+                              }
+                              disabled={locked}
                               onChange={(value) =>
                                 handleLanePriceChange(lane.key, value)
                               }
                             />
-                          )
-                        })}
-                      </div>
+                            <FieldDescription>
+                              {locked
+                                ? t(
+                                    'Output price follows the model multiplier. Use expression pricing for a custom output price.'
+                                  )
+                                : t(
+                                    'Leave blank to use the effective default shown above.'
+                                  )}
+                            </FieldDescription>
+                            {error && (
+                              <p
+                                role='alert'
+                                className='text-destructive text-sm'
+                              >
+                                {error.message}
+                              </p>
+                            )}
+                          </Field>
+                        )
+                      })}
+
+                      <details
+                        open={
+                          laneEnabled.image ||
+                          laneEnabled.audioInput ||
+                          laneEnabled.audioOutput ||
+                          undefined
+                        }
+                      >
+                        <summary className='cursor-pointer text-sm font-medium'>
+                          {t('Advanced pricing')}
+                        </summary>
+                        <FieldDescription className='my-3'>
+                          {t(
+                            'Image and audio prices are configured here. Use expression pricing for cache-write duration, context tiers, and request rules.'
+                          )}
+                        </FieldDescription>
+                        <div className='grid gap-3'>
+                          {laneConfigs.slice(3).map((lane) => {
+                            const disabled =
+                              lane.key === 'audioOutput' &&
+                              (!laneEnabled.audioInput ||
+                                !hasValue(lanePrices.audioInput))
+                            return (
+                              <PriceLane
+                                key={lane.key}
+                                title={t(lane.titleKey)}
+                                description={t(lane.descriptionKey)}
+                                placeholder={lane.placeholder}
+                                value={lanePrices[lane.key]}
+                                enabled={laneEnabled[lane.key]}
+                                disabled={disabled}
+                                onEnabledChange={(checked) =>
+                                  handleLaneToggle(lane.key, checked)
+                                }
+                                onChange={(value) =>
+                                  handleLanePriceChange(lane.key, value)
+                                }
+                              />
+                            )
+                          })}
+                        </div>
+                      </details>
                     </FieldGroup>
                   </TabsContent>
 

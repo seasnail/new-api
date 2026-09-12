@@ -433,40 +433,45 @@ func GetCompletionRatio(name string) float64 {
 }
 
 type CompletionRatioInfo struct {
-	Ratio  float64 `json:"ratio"`
-	Locked bool    `json:"locked"`
+	Ratio        float64 `json:"ratio"`
+	Locked       bool    `json:"locked"`
+	DefaultRatio float64 `json:"default_ratio"`
 }
 
 func GetCompletionRatioInfo(name string) CompletionRatioInfo {
 	name = FormatMatchingModelName(name)
+	hardCodedRatio, locked := getHardcodedCompletionModelRatio(name)
 
 	if strings.Contains(name, "/") {
 		if ratio, ok := completionRatioMap.Get(name); ok {
 			return CompletionRatioInfo{
-				Ratio:  ratio,
-				Locked: false,
+				Ratio:        ratio,
+				Locked:       false,
+				DefaultRatio: hardCodedRatio,
 			}
 		}
 	}
 
-	hardCodedRatio, locked := getHardcodedCompletionModelRatio(name)
 	if locked {
 		return CompletionRatioInfo{
-			Ratio:  hardCodedRatio,
-			Locked: true,
+			Ratio:        hardCodedRatio,
+			Locked:       true,
+			DefaultRatio: hardCodedRatio,
 		}
 	}
 
 	if ratio, ok := completionRatioMap.Get(name); ok {
 		return CompletionRatioInfo{
-			Ratio:  ratio,
-			Locked: false,
+			Ratio:        ratio,
+			Locked:       false,
+			DefaultRatio: hardCodedRatio,
 		}
 	}
 
 	return CompletionRatioInfo{
-		Ratio:  hardCodedRatio,
-		Locked: false,
+		Ratio:        hardCodedRatio,
+		Locked:       false,
+		DefaultRatio: hardCodedRatio,
 	}
 }
 

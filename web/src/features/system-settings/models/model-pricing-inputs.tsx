@@ -31,6 +31,9 @@ import {
 } from '../components/settings-form-layout'
 
 export function PriceInput(props: {
+  id?: string
+  label?: string
+  invalid?: boolean
   value: string
   placeholder?: string
   disabled?: boolean
@@ -40,6 +43,9 @@ export function PriceInput(props: {
     <InputGroup>
       <InputGroupAddon>$</InputGroupAddon>
       <InputGroupInput
+        id={props.id}
+        aria-label={props.label}
+        aria-invalid={props.invalid || undefined}
         inputMode='decimal'
         value={props.value}
         placeholder={props.placeholder}
@@ -78,6 +84,7 @@ export function PriceLane(props: {
         aria-label={props.title}
       />
       <PriceInput
+        label={props.title}
         value={props.value}
         placeholder={props.placeholder}
         disabled={effectiveDisabled}

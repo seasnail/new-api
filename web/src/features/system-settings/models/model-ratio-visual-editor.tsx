@@ -49,12 +49,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { usePricingData } from '@/features/pricing/hooks/use-pricing-data'
 import { combineBillingExpr } from '@/features/pricing/lib/billing-expr'
-import { useMediaQuery } from '@/hooks'
 
+import { useSystemOptions } from '../hooks/use-system-options'
 import { safeJsonParse } from '../utils/json-parser'
 import type { PricingMode } from './model-pricing-core'
 import {
-  ModelPricingEditorPanel,
   type ModelPricingEditorPanelHandle,
   ModelPricingSheet,
   type ModelRatioData,
@@ -64,6 +63,7 @@ import {
   getSnapshotSignature,
   isBasePricingUnset,
   type ModelRow,
+  type CompletionRatioMeta,
 } from './model-pricing-snapshots'
 import {
   buildModelRatioColumns,
@@ -140,8 +140,18 @@ const ModelRatioVisualEditorComponent = forwardRef<
   ref
 ) {
   const { t } = useTranslation()
+  const { data: systemOptions } = useSystemOptions()
+  const completionMeta = useMemo(
+    () =>
+      safeJsonParse<Record<string, CompletionRatioMeta>>(
+        systemOptions?.data?.find(
+          (option) => option.key === 'CompletionRatioMeta'
+        )?.value || '{}',
+        { fallback: {}, silent: true }
+      ),
+    [systemOptions]
+  )
   const { models: pricingModels } = usePricingData()
-  const isMobile = useMediaQuery('(max-width: 767px)')
   const [sheetOpen, setSheetOpen] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [editData, setEditData] = useState<ModelRatioData | null>(null)
@@ -244,13 +254,14 @@ const ModelRatioVisualEditorComponent = forwardRef<
       .map((name) => {
         const saved = savedByName.get(name)
         const draft = draftByName.get(name)
-        const displayed = saved ??
-          draft ?? { name, billingMode: 'per-token', hasConflict: false }
+        const displayed = draft ??
+          saved ?? { name, billingMode: 'per-token', hasConflict: false }
         const savedSignature = getSnapshotSignature(saved)
         const draftSignature = getSnapshotSignature(draft)
 
         return {
           ...displayed,
+          completionMeta: completionMeta[name],
           saved,
           draft,
           isDraftChanged: savedSignature !== draftSignature,
@@ -262,6 +273,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
       .filter((row) => filterMode !== 'unset' || isBasePricingUnset(row.saved))
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [
+    completionMeta,
     candidateModelNames,
     filterMode,
     savedModelPrice,
@@ -311,40 +323,38 @@ const ModelRatioVisualEditorComponent = forwardRef<
     return counts
   }, [models, taskModelNames])
 
-  const handleEdit = useCallback(
-    (model: ModelRow) => {
-      const editableModel = model.draft ?? model.saved ?? model
-      let editBillingMode: PricingMode = 'per-token'
-      if (editableModel.billingMode === 'tiered_expr') {
-        editBillingMode = 'tiered_expr'
-      } else if (editableModel.price && editableModel.price !== '') {
-        editBillingMode = 'per-request'
-      }
-      setEditData({
-        name: editableModel.name,
-        price: editableModel.price,
-        ratio: editableModel.ratio,
-        cacheRatio: editableModel.cacheRatio,
-        createCacheRatio: editableModel.createCacheRatio,
-        completionRatio: editableModel.completionRatio,
-        imageRatio: editableModel.imageRatio,
-        audioRatio: editableModel.audioRatio,
-        audioCompletionRatio: editableModel.audioCompletionRatio,
-        billingMode: editBillingMode,
-        billingExpr: editableModel.billingExpr,
-        requestRuleExpr: editableModel.requestRuleExpr,
-      })
-      setEditorOpen(true)
-      if (isMobile) setSheetOpen(true)
-    },
-    [isMobile]
-  )
+  const handleEdit = useCallback((model: ModelRow) => {
+    const editableModel = model.draft ?? model.saved ?? model
+    let editBillingMode: PricingMode = 'per-token'
+    if (editableModel.billingMode === 'tiered_expr') {
+      editBillingMode = 'tiered_expr'
+    } else if (editableModel.price && editableModel.price !== '') {
+      editBillingMode = 'per-request'
+    }
+    setEditData({
+      name: editableModel.name,
+      price: editableModel.price,
+      ratio: editableModel.ratio,
+      cacheRatio: editableModel.cacheRatio,
+      createCacheRatio: editableModel.createCacheRatio,
+      completionRatio: editableModel.completionRatio,
+      imageRatio: editableModel.imageRatio,
+      audioRatio: editableModel.audioRatio,
+      audioCompletionRatio: editableModel.audioCompletionRatio,
+      billingMode: editBillingMode,
+      billingExpr: editableModel.billingExpr,
+      requestRuleExpr: editableModel.requestRuleExpr,
+      completionMeta: model.completionMeta,
+    })
+    setEditorOpen(true)
+    setSheetOpen(true)
+  }, [])
 
   const handleAdd = useCallback(() => {
     setEditData(null)
     setEditorOpen(true)
-    if (isMobile) setSheetOpen(true)
-  }, [isMobile])
+    setSheetOpen(true)
+  }, [])
 
   const handleGlobalFilterChange = useCallback<OnChangeFn<string>>(
     (updater) => {
@@ -551,7 +561,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
         value: string | undefined
       ) => {
         if (!value || value === '') return
-        const parsed = parseFloat(value)
+        const parsed = Number.parseFloat(value)
         if (Number.isFinite(parsed)) target[name] = parsed
       }
 
@@ -701,8 +711,13 @@ const ModelRatioVisualEditorComponent = forwardRef<
 
   return (
     <div className='flex flex-col gap-4'>
-      <div className='grid h-[clamp(720px,calc(100vh-12rem),900px)] min-h-0 gap-4 md:grid-cols-[minmax(300px,0.72fr)_minmax(520px,1.28fr)] xl:grid-cols-[minmax(320px,0.68fr)_minmax(640px,1.32fr)]'>
-        <div className='flex min-h-0 min-w-0 flex-col gap-3'>
+      <p className='text-muted-foreground text-sm'>
+        {t(
+          'Token prices are USD per million tokens. Variable prices and per-request charges are available in the model editor.'
+        )}
+      </p>
+      <div className='flex h-[clamp(720px,calc(100vh-12rem),900px)] min-h-0 flex-col gap-4'>
+        <div className='flex min-h-0 min-w-0 flex-1 flex-col gap-3'>
           <DataTableToolbar
             table={table}
             searchPlaceholder={t('Search models...')}
@@ -754,7 +769,7 @@ const ModelRatioVisualEditorComponent = forwardRef<
               table={table}
               containerClassName='min-h-0 flex-1 rounded-md'
               tableContainerClassName='h-full'
-              tableClassName='min-w-[852px] table-fixed'
+          tableClassName='min-w-[1200px] table-fixed'
               tableHeaderClassName='[&_tr]:border-b-0'
               splitHeaderScrollClassName='h-full'
               bodyContainerClassName='[scrollbar-gutter:stable]'
@@ -767,11 +782,9 @@ const ModelRatioVisualEditorComponent = forwardRef<
               ]}
               colgroup={
                 <colgroup>
-                  <col className='w-9' />
-                  <col className='w-[300px]' />
-                  <col className='w-[120px]' />
-                  <col className='w-[300px]' />
-                  <col className='w-auto' />
+                  {table.getVisibleLeafColumns().map((column) => (
+                    <col key={column.id} style={{ width: column.getSize() }} />
+                  ))}
                 </colgroup>
               }
               renderRow={(row, { getCellClassName }) => (
@@ -801,35 +814,6 @@ const ModelRatioVisualEditorComponent = forwardRef<
 
           {hasRows && <DataTablePagination table={table} />}
         </div>
-
-        <div className='hidden min-h-0 min-w-0 md:block'>
-          {editorOpen ? (
-            <ModelPricingEditorPanel
-              ref={editorPanelRef}
-              editData={editData}
-              onSave={onSave}
-              isSaving={isSaving}
-              className='h-full min-h-0'
-            />
-          ) : (
-            <div className='bg-card text-muted-foreground flex h-full min-h-0 flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-6 text-center'>
-              <div className='text-foreground text-base font-medium'>
-                {t('Select a model to edit pricing')}
-              </div>
-              <p className='max-w-sm text-sm'>
-                {t(
-                  'Use the full-width table to scan prices, then select a row to edit it here.'
-                )}
-              </p>
-              {filterMode !== 'unset' && (
-                <Button variant='outline' onClick={handleAdd}>
-                  <Plus data-icon='inline-start' />
-                  {t('Add model')}
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
       </div>
 
       <DataTableBulkActions table={table} entityName={t('model')}>
@@ -841,16 +825,36 @@ const ModelRatioVisualEditorComponent = forwardRef<
         </Button>
       </DataTableBulkActions>
 
-      {isMobile && (
-        <ModelPricingSheet
-          ref={editorPanelRef}
-          open={sheetOpen}
-          onOpenChange={setSheetOpen}
-          editData={editData}
-          onSave={onSave}
-          isSaving={isSaving}
-        />
-      )}
+      <ModelPricingSheet
+        ref={editorPanelRef}
+        open={sheetOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setSheetOpen(true)
+            return
+          }
+          void (async () => {
+            const data = await editorPanelRef.current?.commitDraft()
+            if (data) {
+              const original = editData
+                ? { ...editData, hasConflict: false }
+                : undefined
+              if (
+                getSnapshotSignature(original) !==
+                getSnapshotSignature({ ...data, hasConflict: false })
+              ) {
+                persistPricingData(data)
+              }
+              setEditData(data)
+            }
+            setSheetOpen(false)
+            setEditorOpen(false)
+          })()
+        }}
+        editData={editData}
+        onSave={onSave}
+        isSaving={isSaving}
+      />
     </div>
   )
 })

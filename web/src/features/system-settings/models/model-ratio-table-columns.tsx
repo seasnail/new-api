@@ -26,10 +26,10 @@ import { Checkbox } from '@/components/ui/checkbox'
 import {
   getModeLabel,
   getModeVariant,
-  getPriceDetail,
-  getPriceSummary,
+  getTokenPrices,
   type ModelRow,
 } from './model-pricing-snapshots'
+import { formatPricingNumber } from './pricing-format'
 
 export const TASK_PRICING_MODE_FILTER = 'tiered_expr_task'
 
@@ -82,6 +82,7 @@ export function buildModelRatioColumns({
     },
     {
       accessorKey: 'name',
+      size: 240,
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title={t('Model name')} />
       ),
@@ -93,7 +94,8 @@ export function buildModelRatioColumns({
         const showTaskPricingBadge = isTaskModel && hasConfiguredTaskPricing
         const showTieredBadge =
           row.original.billingMode === 'tiered_expr' && !isTaskModel
-        const showUnconfiguredTaskBadge = isTaskModel && !hasConfiguredTaskPricing
+        const showUnconfiguredTaskBadge =
+          isTaskModel && !hasConfiguredTaskPricing
 
         return (
           <div className='flex min-w-0 items-center gap-2 font-medium'>
@@ -137,6 +139,7 @@ export function buildModelRatioColumns({
     },
     {
       accessorKey: 'billingMode',
+      size: 120,
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title={t('Mode')} />
       ),
@@ -151,7 +154,10 @@ export function buildModelRatioColumns({
       ),
       filterFn: (row, id, value) => {
         if (filterBySelectedValues(row.getValue(id), value)) return true
-        if (!Array.isArray(value) || !value.includes(TASK_PRICING_MODE_FILTER)) {
+        if (
+          !Array.isArray(value) ||
+          !value.includes(TASK_PRICING_MODE_FILTER)
+        ) {
           return false
         }
         return (
@@ -162,29 +168,43 @@ export function buildModelRatioColumns({
       },
       meta: { label: t('Mode') },
     },
-    {
-      id: 'priceSummary',
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('Price summary')} />
-      ),
-      cell: ({ row }) => (
-        <div className='flex min-w-0 flex-col gap-1'>
-          <span className='truncate font-medium'>
-            {getPriceSummary(row.original, t)}
-          </span>
-          <span className='text-muted-foreground truncate text-xs'>
-            {getPriceDetail(row.original, t)}
-          </span>
-        </div>
-      ),
-      sortingFn: (rowA, rowB) =>
-        getPriceSummary(rowA.original, t).localeCompare(
-          getPriceSummary(rowB.original, t)
+    ...(
+      [
+        ['input', t('Input price')],
+        ['output', t('Completion price')],
+        ['cacheRead', t('Cache read price')],
+        ['cacheWrite', t('Cache write price')],
+      ] as const
+    ).map(
+      ([key, label]): ColumnDef<ModelRow> => ({
+        id: key,
+        size: 180,
+        accessorFn: (row) => getTokenPrices(row)[key] ?? undefined,
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={`${label} ($/1M)`} />
         ),
-      meta: { label: t('Price summary') },
-    },
+        cell: ({ row }) => {
+          const value = getTokenPrices(row.original)[key]
+          if (row.original.billingMode === 'tiered_expr') {
+            return (
+              <span className='text-muted-foreground'>{t('Variable')}</span>
+            )
+          }
+          if (value === null) {
+            return <span className='text-muted-foreground'>—</span>
+          }
+          return (
+            <span className='tabular-nums'>${formatPricingNumber(value)}</span>
+          )
+        },
+        sortingFn: 'basic',
+        sortUndefined: 'last',
+        meta: { label: `${label} ($/1M)` },
+      })
+    ),
     {
       id: 'actions',
+      size: 88,
       header: () => <div>{t('Actions')}</div>,
       cell: ({ row }) => (
         <StaticRowActions
