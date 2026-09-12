@@ -28,6 +28,7 @@ import {
   Link,
   Loader2,
   SquareTerminal,
+  Play,
 } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -240,6 +241,29 @@ export function DataTableRowActions<TData>({
           <Edit />
         </TooltipTrigger>
         <TooltipContent>{t('Edit')}</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant='ghost'
+              size='icon-sm'
+              onClick={async () => {
+                const realKey = await resolveRealKey(apiKey.id)
+                if (!realKey) return
+                setResolvedKey(realKey)
+                setCurrentRow(apiKey)
+                setOpen('test')
+              }}
+              disabled={isRealKeyLoading}
+              aria-label={t('Test')}
+            />
+          }
+        >
+          <Play aria-hidden='true' />
+        </TooltipTrigger>
+        <TooltipContent>{t('Test')}</TooltipContent>
       </Tooltip>
 
       <Tooltip>

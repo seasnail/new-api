@@ -131,7 +131,7 @@ export function CodexConfiguration(props: CodexConfigurationProps) {
                 <h3 className='font-medium'>1. {t('Close Codex')}</h3>
                 <p className='text-muted-foreground text-sm'>
                   {t(
-                    'Fully quit Codex and ChatGPT, including their system tray instances, before changing the configuration.'
+                    'Fully quit Codex and ChatGPT, including all background processes, before changing the configuration.'
                   )}
                 </p>
                 <CommandBlock

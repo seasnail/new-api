@@ -2213,6 +2213,7 @@
     "Full JSON": "完整 JSON",
     "Full layout": "全屏佈局",
     "Full width": "全寬",
+    "Fully quit Codex and ChatGPT, including all background processes, before changing the configuration.": "變更設定前，請完全結束 Codex 和 ChatGPT，包括所有背景處理程序。",
     "Fully quit Codex and ChatGPT, including their system tray instances, before changing the configuration.": "變更設定前，請完全結束 Codex 和 ChatGPT，包括系統匣中的執行個體。",
     "Function calling": "函數呼叫",
     "Functions": "函數",

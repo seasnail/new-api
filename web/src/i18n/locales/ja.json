@@ -2213,6 +2213,7 @@
     "Full JSON": "完全な JSON",
     "Full layout": "フルレイアウト",
     "Full width": "全幅",
+    "Fully quit Codex and ChatGPT, including all background processes, before changing the configuration.": "設定を変更する前に、すべてのバックグラウンドプロセスを含め、Codex と ChatGPT を完全に終了してください。",
     "Fully quit Codex and ChatGPT, including their system tray instances, before changing the configuration.": "設定を変更する前に、システムトレイのインスタンスも含め、Codex と ChatGPT を完全に終了してください。",
     "Function calling": "関数呼び出し",
     "Functions": "関数",

@@ -2213,6 +2213,7 @@
     "Full JSON": "JSON complet",
     "Full layout": "Disposition complète",
     "Full width": "Pleine largeur",
+    "Fully quit Codex and ChatGPT, including all background processes, before changing the configuration.": "Quittez complètement Codex et ChatGPT, y compris tous les processus en arrière-plan, avant de modifier la configuration.",
     "Fully quit Codex and ChatGPT, including their system tray instances, before changing the configuration.": "Quittez complètement Codex et ChatGPT, y compris leurs instances dans la zone de notification, avant de modifier la configuration.",
     "Function calling": "Appel de fonction",
     "Functions": "Fonctions",
