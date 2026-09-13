@@ -348,13 +348,24 @@ export function useChatHandler({
   // Send chat request (stream or non-stream based on config)
   const sendChat = useCallback(
     (messages: Message[]) => {
+      const nextMessages = updateLastAssistantMessage(messages, (message) => ({
+        ...message,
+        model: config.model,
+      }))
+      onMessageUpdate(() => nextMessages)
       if (config.stream) {
-        sendStreamingChat(messages)
+        sendStreamingChat(nextMessages)
       } else {
-        sendNonStreamingChat(messages)
+        sendNonStreamingChat(nextMessages)
       }
     },
-    [config.stream, sendStreamingChat, sendNonStreamingChat]
+    [
+      config.model,
+      config.stream,
+      onMessageUpdate,
+      sendStreamingChat,
+      sendNonStreamingChat,
+    ]
   )
 
   // Stop generation

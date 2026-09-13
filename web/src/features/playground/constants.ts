@@ -38,9 +38,8 @@ export const API_ENDPOINTS = {
   USER_MODELS: '/api/user/models',
 } as const
 
-// Default group — uses 'default' as the safe fallback; auto-group is
-// only selected when the backend confirms it is available for the user.
-export const DEFAULT_GROUP = 'default' as const
+// Empty chat request groups inherit the user's current group on the server.
+export const DEFAULT_GROUP = '' as const
 
 // Default configuration
 export const DEFAULT_CONFIG: PlaygroundConfig = {
@@ -56,11 +55,11 @@ export const DEFAULT_CONFIG: PlaygroundConfig = {
 }
 
 export const DEFAULT_PARAMETER_ENABLED: ParameterEnabled = {
-  temperature: true,
-  top_p: true,
+  temperature: false,
+  top_p: false,
   max_tokens: false,
-  frequency_penalty: true,
-  presence_penalty: true,
+  frequency_penalty: false,
+  presence_penalty: false,
   seed: false,
 }
 

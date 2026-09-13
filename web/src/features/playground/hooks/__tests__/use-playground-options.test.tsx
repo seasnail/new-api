@@ -17,12 +17,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import type { PropsWithChildren } from 'react'
-import { describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
+
+import { useAuthStore } from '@/stores/auth-store'
 
 import { getUserModels } from '../../api'
-import { DEFAULT_GROUP } from '../../constants'
 import { usePlaygroundOptions } from '../use-playground-options'
 
 vi.mock('../../api', () => ({
@@ -30,7 +31,33 @@ vi.mock('../../api', () => ({
 }))
 
 describe('usePlaygroundOptions', () => {
-  test('loads every model available to the default group', async () => {
+  afterEach(() => useAuthStore.getState().auth.reset())
+
+  test('does not request models from all groups while the user group is unavailable', () => {
+    useAuthStore.getState().auth.reset()
+    const queryClient = new QueryClient()
+    renderHook(
+      () =>
+        usePlaygroundOptions({
+          currentModel: '',
+          setModels: vi.fn(),
+          updateConfig: vi.fn(),
+        }),
+      {
+        wrapper: ({ children }: PropsWithChildren) => (
+          <QueryClientProvider client={queryClient}>
+            {children}
+          </QueryClientProvider>
+        ),
+      }
+    )
+    expect(getUserModels).not.toHaveBeenCalled()
+  })
+
+  test('reloads models for the user group after the user is moved', async () => {
+    useAuthStore
+      .getState()
+      .auth.setUser({ id: 1, username: 'user', role: 1, group: 'default' })
     const models = [
       { label: 'gpt-4o', value: 'gpt-4o' },
       { label: 'claude-sonnet', value: 'claude-sonnet' },
@@ -58,6 +85,16 @@ describe('usePlaygroundOptions', () => {
     )
 
     await waitFor(() => expect(setModels).toHaveBeenCalledWith(models))
-    expect(getUserModels).toHaveBeenCalledWith(DEFAULT_GROUP)
+    expect(getUserModels).toHaveBeenCalledWith('default')
+
+    const groupModels = [{ label: 'group-model', value: 'group-model' }]
+    vi.mocked(getUserModels).mockResolvedValue(groupModels)
+    act(() => {
+      useAuthStore
+        .getState()
+        .auth.setUser({ id: 1, username: 'user', role: 1, group: 'group_1' })
+    })
+    await waitFor(() => expect(getUserModels).toHaveBeenCalledWith('group_1'))
+    await waitFor(() => expect(setModels).toHaveBeenLastCalledWith(groupModels))
   })
 })

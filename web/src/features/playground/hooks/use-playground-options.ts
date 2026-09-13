@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useQuery } from '@tanstack/react-query'
+import { skipToken, useQuery } from '@tanstack/react-query'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -39,8 +39,9 @@ import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { useAuthStore } from '@/stores/auth-store'
+
 import { getUserModels } from '../api'
-import { DEFAULT_GROUP } from '../constants'
 import {
   getModelFallback,
   getOptionLoadErrorMessage,
@@ -63,6 +64,8 @@ export function usePlaygroundOptions({
   updateConfig,
 }: UsePlaygroundOptionsParams) {
   const { t } = useTranslation()
+  const userId = useAuthStore((state) => state.auth.user?.id)
+  const userGroup = useAuthStore((state) => state.auth.user?.group)
 
   const {
     data: modelsData,
@@ -70,8 +73,8 @@ export function usePlaygroundOptions({
     isError: isModelsError,
     isLoading: isLoadingModels,
   } = useQuery({
-    queryKey: ['playground-models', DEFAULT_GROUP],
-    queryFn: () => getUserModels(DEFAULT_GROUP),
+    queryKey: ['playground-models', userId, userGroup],
+    queryFn: userId && userGroup ? () => getUserModels(userGroup) : skipToken,
   })
 
   useEffect(() => {

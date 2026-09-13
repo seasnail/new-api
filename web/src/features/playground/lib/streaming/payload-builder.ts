@@ -48,7 +48,13 @@ export function buildChatCompletionPayload(
     payload.temperature = config.temperature
   }
 
-  if (parameterEnabled.top_p) {
+  // Sonnet 4.6 rejects simultaneous temperature and top_p, including defaults
+  // restored from saved playground settings. Prefer temperature in that case.
+  const hasSamplingConflict =
+    /(?:^|[/.])claude-sonnet-4-6(?:$|[-:])/.test(config.model) &&
+    parameterEnabled.temperature
+
+  if (parameterEnabled.top_p && !hasSamplingConflict) {
     payload.top_p = config.top_p
   }
 

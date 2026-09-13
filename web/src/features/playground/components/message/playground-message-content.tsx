@@ -91,6 +91,11 @@ export function PlaygroundMessageContent({
         getMessageAlignmentClass(alignment)
       )}
     >
+      {message.from === 'assistant' && message.model && (
+        <div className='text-muted-foreground mb-2 max-w-full text-xs font-medium wrap-anywhere'>
+          {message.model}
+        </div>
+      )}
       {hasSources && (
         <Sources>
           <SourcesTrigger count={sources.length} />
