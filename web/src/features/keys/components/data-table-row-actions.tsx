@@ -28,6 +28,7 @@ import {
   Link,
   Loader2,
   SquareTerminal,
+  Sparkles,
   Play,
 } from 'lucide-react'
 import { useCallback, useState } from 'react'
@@ -184,13 +185,13 @@ export function DataTableRowActions<TData>({
     }
   }
 
-  const handleOpenCodexConfig = async () => {
+  const handleOpenConfig = async (app: 'codex-config' | 'claude-config') => {
     const realKey = await resolveRealKey(apiKey.id)
     if (!realKey) return
 
     setResolvedKey(realKey)
     setCurrentRow(apiKey)
-    setOpen('codex-config')
+    setOpen(app)
   }
 
   let statusIcon = <Power className='size-4' />
@@ -272,7 +273,7 @@ export function DataTableRowActions<TData>({
             <Button
               variant='ghost'
               size='icon-sm'
-              onClick={handleOpenCodexConfig}
+              onClick={() => handleOpenConfig('codex-config')}
               disabled={isRealKeyLoading}
               aria-label={t('Configure Codex')}
             />
@@ -285,6 +286,23 @@ export function DataTableRowActions<TData>({
           )}
         </TooltipTrigger>
         <TooltipContent>{t('Configure Codex')}</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant='ghost'
+              size='icon-sm'
+              onClick={() => handleOpenConfig('claude-config')}
+              disabled={isRealKeyLoading}
+              aria-label={t('Configure Claude')}
+            />
+          }
+        >
+          <Sparkles aria-hidden='true' />
+        </TooltipTrigger>
+        <TooltipContent>{t('Configure Claude')}</TooltipContent>
       </Tooltip>
 
       <DataTableRowActionMenu

@@ -63,18 +63,34 @@ const apiKey: ApiKey = {
 }
 
 describe('API key Codex config action', () => {
-  test('resolves the full key before opening the config drawer', async () => {
-    context.resolveRealKey.mockResolvedValue('sk-full-key')
+  test.each([
+    ['Configure Codex', 'codex-config'],
+    ['Configure Claude', 'claude-config'],
+  ])(
+    '%s resolves the full key before opening the config drawer',
+    async (label, drawer) => {
+      vi.clearAllMocks()
+      context.resolveRealKey.mockResolvedValue('sk-full-key')
 
+      render(<DataTableRowActions row={{ original: apiKey } as Row<ApiKey>} />)
+
+      fireEvent.click(screen.getByRole('button', { name: label }))
+
+      await waitFor(() => {
+        expect(context.resolveRealKey).toHaveBeenCalledWith(42)
+        expect(context.setResolvedKey).toHaveBeenCalledWith('sk-full-key')
+        expect(context.setCurrentRow).toHaveBeenCalledWith(apiKey)
+        expect(context.setOpen).toHaveBeenCalledWith(drawer)
+      })
+    }
+  )
+  test('does not open Claude configuration when key resolution fails', async () => {
+    vi.clearAllMocks()
+    context.resolveRealKey.mockResolvedValue(null)
     render(<DataTableRowActions row={{ original: apiKey } as Row<ApiKey>} />)
-
-    fireEvent.click(screen.getByRole('button', { name: 'Configure Codex' }))
-
-    await waitFor(() => {
-      expect(context.resolveRealKey).toHaveBeenCalledWith(42)
-      expect(context.setResolvedKey).toHaveBeenCalledWith('sk-full-key')
-      expect(context.setCurrentRow).toHaveBeenCalledWith(apiKey)
-      expect(context.setOpen).toHaveBeenCalledWith('codex-config')
-    })
+    fireEvent.click(screen.getByRole('button', { name: 'Configure Claude' }))
+    await waitFor(() => expect(context.resolveRealKey).toHaveBeenCalledWith(42))
+    expect(context.setOpen).not.toHaveBeenCalled()
+    expect(context.setResolvedKey).not.toHaveBeenCalled()
   })
 })

@@ -21,6 +21,7 @@ import { ApiKeysMutateDrawer } from './api-keys-mutate-drawer'
 import { useApiKeys } from './api-keys-provider'
 import { ApiKeyTestDrawer } from './dialogs/api-key-test-drawer'
 import { CCSwitchDialog } from './dialogs/cc-switch-dialog'
+import { ClaudeConfigDrawer } from './dialogs/claude-config-drawer'
 import { CodexConfigDrawer } from './dialogs/codex-config-drawer'
 
 export function ApiKeysDialogs() {
@@ -52,6 +53,14 @@ export function ApiKeysDialogs() {
         apiKey={currentRow}
         tokenKey={resolvedKey}
       />
+      {open === 'claude-config' && (
+        <ClaudeConfigDrawer
+          open
+          onOpenChange={(isOpen) => !isOpen && setOpen(null)}
+          apiKey={currentRow}
+          tokenKey={resolvedKey}
+        />
+      )}
     </>
   )
 }
