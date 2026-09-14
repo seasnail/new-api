@@ -180,9 +180,9 @@ export function Features(_props: FeaturesProps) {
   ]
 
   return (
-    <section className='relative z-10 px-6 py-24 md:py-32'>
+    <section className='relative z-10 px-6 py-10 md:py-12'>
       <div className='mx-auto max-w-6xl'>
-        <AnimateInView className='mb-16 max-w-lg'>
+        <AnimateInView className='mb-6 max-w-lg'>
           <p className='text-muted-foreground mb-3 text-xs font-medium tracking-widest uppercase'>
             {t('Core Features')}
           </p>
@@ -200,7 +200,7 @@ export function Features(_props: FeaturesProps) {
               key={f.id}
               delay={i * 100}
               animation='scale-in'
-              className={`bg-background group hover:bg-muted/20 p-7 transition-colors duration-300 md:p-8 ${f.span}`}
+              className={`bg-background group hover:bg-muted/20 p-5 transition-colors duration-300 md:p-6 ${f.span}`}
             >
               <div className='mb-3 flex items-center gap-3'>
                 <span className='border-border/40 bg-muted text-muted-foreground flex size-7 items-center justify-center rounded-md border text-[10px] font-semibold tabular-nums'>
@@ -217,7 +217,7 @@ export function Features(_props: FeaturesProps) {
         </div>
 
         {/* Additional features row */}
-        <div className='mt-12 grid grid-cols-2 gap-8 md:grid-cols-4 md:gap-12'>
+        <div className='mt-6 grid grid-cols-2 gap-5 md:grid-cols-4 md:gap-6'>
           {additionalFeatures.map((f, i) => (
             <AnimateInView
               key={f.title}

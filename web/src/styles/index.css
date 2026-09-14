@@ -32,6 +32,23 @@ For commercial licensing, please contact support@quantumnous.com
 
 /* Shiki dual themes: token colors follow dark theme (pre background stays `bg-background` on the block) */
 @layer components {
+  .home-galaxy::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(
+        color-mix(in oklch, var(--background) 75%, transparent),
+        color-mix(in oklch, var(--background) 90%, transparent)
+      ),
+      url('../../public/images/home-galaxy.jpg');
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+  }
+
   .shiki span {
     color: var(--shiki-light) !important;
     font-style: var(--shiki-light-font-style) !important;

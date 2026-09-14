@@ -47,9 +47,9 @@ i18n
       escapeValue: false, // not needed for react as it escapes by default
     },
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['localStorage'],
       caches: ['localStorage'],
-      // Browsers report standard Chinese tags; map them onto our `zhCN` code.
+      // Normalize saved language tags; new visitors use the English fallback.
       convertDetectedLanguage,
     },
   })

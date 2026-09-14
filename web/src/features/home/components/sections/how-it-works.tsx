@@ -50,9 +50,9 @@ export function HowItWorks() {
   ]
 
   return (
-    <section className='border-border/40 relative z-10 border-t px-6 py-24 md:py-32'>
+    <section className='border-border/40 relative z-10 border-t px-6 py-10 md:py-12'>
       <div className='mx-auto max-w-6xl'>
-        <AnimateInView className='mb-16 text-center md:mb-20'>
+        <AnimateInView className='mb-8 text-center'>
           <p className='text-muted-foreground mb-3 text-xs font-medium tracking-widest uppercase'>
             {t('How It Works')}
           </p>
@@ -61,7 +61,7 @@ export function HowItWorks() {
           </h2>
         </AnimateInView>
 
-        <div className='grid gap-8 md:grid-cols-3 md:gap-12'>
+        <div className='grid gap-6 md:grid-cols-3 md:gap-8'>
           {steps.map((step, i) => (
             <AnimateInView
               key={step.num}
@@ -69,8 +69,8 @@ export function HowItWorks() {
               animation='fade-up'
               className='relative flex flex-col items-center text-center'
             >
-              <div className='relative mb-6'>
-                <div className='text-muted-foreground border-border/50 bg-muted/30 flex size-16 items-center justify-center rounded-2xl border transition-colors'>
+              <div className='relative mb-3'>
+                <div className='text-muted-foreground border-border/50 bg-muted/30 flex size-12 items-center justify-center rounded-2xl border transition-colors'>
                   {step.icon}
                 </div>
                 <div className='bg-foreground text-background absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full text-xs font-bold'>

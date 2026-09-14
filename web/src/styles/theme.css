@@ -179,8 +179,8 @@ For commercial licensing, please contact support@quantumnous.com
 }
 
 .dark {
-  /* OpenAI-like dark mode with a crisp charcoal canvas. */
-  --background: oklch(0.235 0 0);
+  /* Black canvas with raised surfaces for cards and menus. */
+  --background: oklch(0 0 0);
   --foreground: oklch(0.965 0 0);
   --card: oklch(0.285 0 0);
   --card-foreground: oklch(0.965 0 0);
@@ -212,7 +212,7 @@ For commercial licensing, please contact support@quantumnous.com
   --chart-3: oklch(0.76 0.13 285);
   --chart-4: oklch(0.75 0.16 325);
   --chart-5: oklch(0.76 0.14 155);
-  --sidebar: oklch(0.225 0 0);
+  --sidebar: oklch(0 0 0);
   --sidebar-foreground: oklch(0.95 0 0);
   --sidebar-primary: oklch(0.588 0.123 246.488);
   --sidebar-primary-foreground: oklch(1 0 0);
