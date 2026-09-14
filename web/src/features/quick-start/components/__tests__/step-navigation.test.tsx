@@ -37,7 +37,9 @@ describe('quick start step navigation', () => {
     const modelStep = screen.getByRole('button', {
       name: /Choose a model and make your first request/,
     })
-    const codexStep = screen.getByRole('button', { name: /Configure Codex/ })
+    const codexStep = screen.getByRole('button', {
+      name: /Configure Applications/,
+    })
 
     expect(keyStep).toHaveAttribute('aria-current', 'step')
     expect(modelStep).toBeDisabled()
@@ -61,7 +63,9 @@ describe('quick start step navigation', () => {
     const modelStep = screen.getByRole('button', {
       name: /Choose a model and make your first request/,
     })
-    const codexStep = screen.getByRole('button', { name: /Configure Codex/ })
+    const codexStep = screen.getByRole('button', {
+      name: /Configure Applications/,
+    })
 
     expect(modelStep).toHaveAttribute('aria-current', 'step')
     fireEvent.click(keyStep)

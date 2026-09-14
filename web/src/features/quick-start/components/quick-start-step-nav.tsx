@@ -54,7 +54,7 @@ export function QuickStartStepNav(props: QuickStartStepNavProps) {
     },
     {
       id: 'codex' as const,
-      label: t('Configure Codex'),
+      label: t('Configure Applications'),
       icon: CodeSquareIcon,
       enabled: props.codexStepEnabled,
     },

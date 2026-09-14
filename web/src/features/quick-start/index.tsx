@@ -22,6 +22,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { CopyButton } from '@/components/copy-button'
 import { Main } from '@/components/layout'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -43,7 +44,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { getApiKey } from '@/features/keys/api'
+import { getUnmaskedApiKey } from '@/features/keys/api'
 import { ApiKeysMutateDrawer } from '@/features/keys/components/api-keys-mutate-drawer'
 import { ApiKeysProvider } from '@/features/keys/components/api-keys-provider'
 import type { ApiKey } from '@/features/keys/types'
@@ -51,7 +52,7 @@ import { ModelDetailsApi } from '@/features/pricing/components/model-details-api
 import { usePricingData } from '@/features/pricing/hooks/use-pricing-data'
 import { getUserModels } from '@/lib/api'
 
-import { CodexConfiguration } from './components/codex-configuration'
+import { ApplicationsConfiguration } from './components/applications-configuration'
 import {
   QuickStartStepNav,
   type QuickStartStep,
@@ -68,19 +69,16 @@ type QuickStartProps = {
 export function QuickStart(props: QuickStartProps) {
   const { t } = useTranslation()
   const [selectedModelName, setSelectedModelName] = useState('')
-  const [createdApiKey, setCreatedApiKey] = useState<ApiKey>()
   const configuredStepActive =
     props.step !== 'key' && props.tokenId !== undefined
   const codexStepActive = props.step === 'codex' && configuredStepActive
 
   const apiKeyQuery = useQuery({
     queryKey: ['quick-start', 'api-key', props.tokenId],
-    queryFn: () => getApiKey(props.tokenId ?? 0),
+    queryFn: () => getUnmaskedApiKey(props.tokenId ?? 0),
     enabled: configuredStepActive,
   })
-  const fetchedApiKey = apiKeyQuery.data?.data
-  const apiKey =
-    createdApiKey?.id === props.tokenId ? createdApiKey : fetchedApiKey
+  const apiKey = apiKeyQuery.data?.data
 
   const modelNamesQuery = useQuery({
     queryKey: ['quick-start', 'models', apiKey?.group],
@@ -114,7 +112,6 @@ export function QuickStart(props: QuickStartProps) {
   )
 
   const handleCreated = (createdKey: ApiKey) => {
-    setCreatedApiKey(createdKey)
     props.onTokenCreated(createdKey.id)
   }
 
@@ -256,17 +253,26 @@ export function QuickStart(props: QuickStartProps) {
                   <HugeiconsIcon icon={Key01Icon} />
                   <AlertTitle>{t('API key created')}</AlertTitle>
                   <AlertDescription>
-                    {apiKey.name}{' '}
-                    <Badge variant='secondary'>{`sk-${apiKey.key}`}</Badge>
+                    <div className='flex flex-wrap items-center gap-2'>
+                      <span>{apiKey.name}</span>
+                      <Badge
+                        variant='secondary'
+                        className='break-all whitespace-normal'
+                      >
+                        {apiKey.key}
+                      </Badge>
+                      <CopyButton
+                        value={apiKey.key}
+                        tooltip={t('Copy Key')}
+                        className='size-7'
+                      />
+                    </div>
                   </AlertDescription>
                 </Alert>
               )}
 
               {codexStepActive && apiKey && selectedModel ? (
-                <CodexConfiguration
-                  apiKey={apiKey.key}
-                  modelName={selectedModel.model_name}
-                />
+                <ApplicationsConfiguration apiKey={apiKey} />
               ) : (
                 modelStepContent
               )}
@@ -290,7 +296,7 @@ export function QuickStart(props: QuickStartProps) {
                   }
                   disabled={!selectedModel}
                 >
-                  {codexStepActive ? t('Finish') : t('Configure Codex')}
+                  {codexStepActive ? t('Finish') : t('Configure Applications')}
                 </Button>
               </div>
             </div>

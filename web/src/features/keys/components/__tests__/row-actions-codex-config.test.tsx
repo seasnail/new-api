@@ -62,11 +62,8 @@ const apiKey: ApiKey = {
   allow_ips: '',
 }
 
-describe('API key Codex config action', () => {
-  test.each([
-    ['Configure Codex', 'codex-config'],
-    ['Configure Claude', 'claude-config'],
-  ])(
+describe('API key application config action', () => {
+  test.each([['Configure application', 'application-config']])(
     '%s resolves the full key before opening the config drawer',
     async (label, drawer) => {
       vi.clearAllMocks()
@@ -84,11 +81,13 @@ describe('API key Codex config action', () => {
       })
     }
   )
-  test('does not open Claude configuration when key resolution fails', async () => {
+  test('does not open application configuration when key resolution fails', async () => {
     vi.clearAllMocks()
     context.resolveRealKey.mockResolvedValue(null)
     render(<DataTableRowActions row={{ original: apiKey } as Row<ApiKey>} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Configure Claude' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Configure application' })
+    )
     await waitFor(() => expect(context.resolveRealKey).toHaveBeenCalledWith(42))
     expect(context.setOpen).not.toHaveBeenCalled()
     expect(context.setResolvedKey).not.toHaveBeenCalled()

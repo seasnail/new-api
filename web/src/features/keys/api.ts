@@ -61,6 +61,24 @@ export async function getApiKey(id: number): Promise<ApiResponse<ApiKey>> {
   return res.data
 }
 
+// Setup examples and imports require the full key, not the masked token metadata.
+export async function getUnmaskedApiKey(
+  id: number
+): Promise<ApiResponse<ApiKey>> {
+  const [token, secret] = await Promise.all([getApiKey(id), fetchTokenKey(id)])
+  if (!token.success || !token.data) {
+    throw new Error(token.message || 'Failed to load API key')
+  }
+  if (!secret.success || !secret.data?.key) {
+    throw new Error(secret.message || 'Failed to load API key')
+  }
+  const key = secret.data.key
+  return {
+    ...token,
+    data: { ...token.data, key: key.startsWith('sk-') ? key : `sk-${key}` },
+  }
+}
+
 // Get the current user's global Auto order and the per-token selection limit.
 export async function getTokenAutoGroups(): Promise<
   ApiResponse<TokenAutoGroupsConfig>

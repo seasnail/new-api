@@ -22,13 +22,10 @@ import {
   Edit,
   Power,
   PowerOff,
-  ExternalLink,
   ArrowRightLeft,
-  Copy,
   Link,
   Loader2,
   SquareTerminal,
-  Sparkles,
   Play,
 } from 'lucide-react'
 import { useCallback, useState } from 'react'
@@ -40,9 +37,6 @@ import { Button } from '@/components/ui/button'
 import {
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuShortcut,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -50,9 +44,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useChatPresets } from '@/features/chat/hooks/use-chat-presets'
-import { resolveChatUrl, type ChatPreset } from '@/features/chat/lib/chat-links'
-import { sendToFluent } from '@/features/chat/lib/send-to-fluent'
 import { encodeChannelConnectionInfo } from '@/lib/channel-connection-info'
 import { copyToClipboard } from '@/lib/copy-to-clipboard'
 
@@ -93,12 +84,10 @@ export function DataTableRowActions<TData>({
     loadingKeys,
   } = useApiKeys()
   const isEnabled = apiKey.status === API_KEY_STATUS.ENABLED
-  const { chatPresets, serverAddress } = useChatPresets()
   const [isTogglingStatus, setIsTogglingStatus] = useState(false)
   const resolvedRealKey = resolvedKeys[apiKey.id]
   const isRealKeyLoading = Boolean(loadingKeys[apiKey.id])
 
-  const hasChatPresets = chatPresets.length > 0
   const toggleLabel = isEnabled ? t('Disable') : t('Enable')
 
   const handleMenuOpenChange = useCallback(
@@ -116,47 +105,6 @@ export function DataTableRowActions<TData>({
     toast.info(t('API key is loading, please try again in a moment'))
     return null
   }, [apiKey.id, resolvedRealKey, resolveRealKey, t])
-
-  const handleOpenChatPreset = useCallback(
-    async (preset: ChatPreset) => {
-      const realKey = await resolveRealKey(apiKey.id)
-      if (!realKey) return
-
-      if (preset.type === 'fluent') {
-        const success = sendToFluent(realKey, serverAddress)
-        if (success) {
-          toast.success(t('Sent the API key to FluentRead.'))
-        } else {
-          toast.info(
-            t(
-              'FluentRead extension not detected. Please ensure it is installed and active.'
-            )
-          )
-        }
-        return
-      }
-
-      const resolvedUrl = resolveChatUrl({
-        template: preset.url,
-        apiKey: realKey,
-        serverAddress,
-      })
-
-      if (!resolvedUrl) {
-        toast.error(t('Invalid chat link. Please contact your administrator.'))
-        return
-      }
-
-      if (typeof window === 'undefined') return
-
-      try {
-        window.open(resolvedUrl, '_blank', 'noopener')
-      } catch {
-        window.location.href = resolvedUrl
-      }
-    },
-    [resolveRealKey, apiKey.id, serverAddress, t]
-  )
 
   const handleToggleStatus = async (
     e?: React.MouseEvent<HTMLButtonElement>
@@ -185,7 +133,7 @@ export function DataTableRowActions<TData>({
     }
   }
 
-  const handleOpenConfig = async (app: 'codex-config' | 'claude-config') => {
+  const handleOpenConfig = async (app: 'application-config') => {
     const realKey = await resolveRealKey(apiKey.id)
     if (!realKey) return
 
@@ -273,9 +221,32 @@ export function DataTableRowActions<TData>({
             <Button
               variant='ghost'
               size='icon-sm'
-              onClick={() => handleOpenConfig('codex-config')}
+              onClick={async () => {
+                const realKey = await resolveRealKey(apiKey.id)
+                if (!realKey) return
+                setResolvedKey(realKey)
+                setCurrentRow(apiKey)
+                setOpen('cc-switch')
+              }}
               disabled={isRealKeyLoading}
-              aria-label={t('Configure Codex')}
+              aria-label={t('CC Switch')}
+            />
+          }
+        >
+          <ArrowRightLeft aria-hidden='true' />
+        </TooltipTrigger>
+        <TooltipContent>{t('CC Switch')}</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant='ghost'
+              size='icon-sm'
+              onClick={() => handleOpenConfig('application-config')}
+              disabled={isRealKeyLoading}
+              aria-label={t('Configure application')}
             />
           }
         >
@@ -285,25 +256,9 @@ export function DataTableRowActions<TData>({
             <SquareTerminal />
           )}
         </TooltipTrigger>
-        <TooltipContent>{t('Configure Codex')}</TooltipContent>
+        <TooltipContent>{t('Configure application')}</TooltipContent>
       </Tooltip>
 
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              variant='ghost'
-              size='icon-sm'
-              onClick={() => handleOpenConfig('claude-config')}
-              disabled={isRealKeyLoading}
-              aria-label={t('Configure Claude')}
-            />
-          }
-        >
-          <Sparkles aria-hidden='true' />
-        </TooltipTrigger>
-        <TooltipContent>{t('Configure Claude')}</TooltipContent>
-      </Tooltip>
 
       <DataTableRowActionMenu
         ariaLabel={t('Open menu')}
@@ -311,19 +266,6 @@ export function DataTableRowActions<TData>({
         modal={false}
         onOpenChange={handleMenuOpenChange}
       >
-        <DropdownMenuItem
-          onClick={async () => {
-            const realKey = getCachedRealKey()
-            if (!realKey) return
-            const ok = await copyToClipboard(realKey)
-            if (ok) toast.success(t('Copied'))
-          }}
-        >
-          {t('Copy Key')}
-          <DropdownMenuShortcut>
-            <Copy size={16} />
-          </DropdownMenuShortcut>
-        </DropdownMenuItem>
         <DropdownMenuItem
           onClick={async () => {
             const realKey = getCachedRealKey()
@@ -341,41 +283,6 @@ export function DataTableRowActions<TData>({
             <Link size={16} />
           </DropdownMenuShortcut>
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={async () => {
-            const realKey = await resolveRealKey(apiKey.id)
-            if (!realKey) return
-            setResolvedKey(realKey)
-            setCurrentRow(apiKey)
-            setOpen('cc-switch')
-          }}
-        >
-          {t('CC Switch')}
-          <DropdownMenuShortcut>
-            <ArrowRightLeft size={16} />
-          </DropdownMenuShortcut>
-        </DropdownMenuItem>
-        {hasChatPresets && (
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>{t('Chat')}</DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              {chatPresets.map((preset) => (
-                <DropdownMenuItem
-                  key={preset.id}
-                  onClick={() => handleOpenChatPreset(preset)}
-                >
-                  {preset.name}
-                  {preset.type !== 'web' && (
-                    <DropdownMenuShortcut>
-                      <ExternalLink size={16} />
-                    </DropdownMenuShortcut>
-                  )}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => {

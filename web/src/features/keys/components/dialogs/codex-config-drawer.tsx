@@ -72,6 +72,7 @@ type CodexConfigDrawerProps = {
   onOpenChange: (open: boolean) => void
   apiKey: ApiKey | null
   tokenKey: string
+  embedded?: boolean
 }
 
 export function CodexConfigDrawer(props: CodexConfigDrawerProps) {
@@ -182,6 +183,115 @@ export function CodexConfigDrawer(props: CodexConfigDrawerProps) {
     )
   }
 
+  const instructions = (
+    <div className='flex flex-col gap-4'>
+      <FieldSet>
+        <FieldLegend variant='label'>{t('Configuration method')}</FieldLegend>
+        <RadioGroup
+          value={configurationMethod}
+          onValueChange={setConfigurationMethod}
+        >
+          <FieldGroup className='gap-3 sm:flex-row'>
+            <Field orientation='horizontal'>
+              <RadioGroupItem value='cc-switch' id='codex-method-cc-switch' />
+              <FieldLabel
+                htmlFor='codex-method-cc-switch'
+                className='font-normal'
+              >
+                CC Switch
+              </FieldLabel>
+            </Field>
+            <Field orientation='horizontal'>
+              <RadioGroupItem
+                value='command-line'
+                id='codex-method-command-line'
+              />
+              <FieldLabel
+                htmlFor='codex-method-command-line'
+                className='font-normal'
+              >
+                {t('Command line')}
+              </FieldLabel>
+            </Field>
+          </FieldGroup>
+        </RadioGroup>
+      </FieldSet>
+      {configurationMethod === 'cc-switch' ? (
+        <div className='flex flex-col gap-4'>
+          <Alert>
+            <AlertTitle>{t('Before you begin')}</AlertTitle>
+            <AlertDescription>
+              {t(
+                'Quit ChatGPT and Codex completely before editing the provider configuration.'
+              )}
+            </AlertDescription>
+          </Alert>
+
+          <figure className='space-y-2'>
+            <figcaption>
+              <h3 className='font-medium'>{t('1: Open the provider form')}</h3>
+              <p className='text-muted-foreground text-sm'>
+                {t(
+                  'In CC Switch, select Codex, then click the plus button to add a provider.'
+                )}
+              </p>
+            </figcaption>
+            <img
+              src={ccSwitchOpenProviderScreenshot}
+              alt={t('CC Switch setup step 1')}
+              width={893}
+              height={345}
+              className='h-auto w-full rounded-lg border'
+            />
+          </figure>
+
+          <figure className='space-y-2'>
+            <figcaption>
+              <h3 className='font-medium'>{t('2: Enter provider details')}</h3>
+              <p className='text-muted-foreground text-sm'>
+                {t(
+                  'Enter the provider name, API key, API request URL, and default model. Select Responses (native), then add the provider.'
+                )}
+              </p>
+            </figcaption>
+            <img
+              src={ccSwitchAddProviderScreenshot}
+              alt={t('CC Switch setup step 2')}
+              width={900}
+              height={1099}
+              className='h-auto w-full rounded-lg border'
+            />
+          </figure>
+
+          <figure className='space-y-2'>
+            <figcaption>
+              <h3 className='font-medium'>{t('3: Enable the provider')}</h3>
+              <p className='text-muted-foreground text-sm'>
+                {t('Find the new provider in the Codex list and click Enable.')}
+              </p>
+            </figcaption>
+            <img
+              src={ccSwitchConfigureProviderScreenshot}
+              alt={t('CC Switch setup step 3')}
+              className='h-auto w-full rounded-lg border'
+            />
+          </figure>
+
+          <Alert>
+            <AlertTitle>{t('Restart Codex')}</AlertTitle>
+            <AlertDescription>
+              {t('Restart ChatGPT and Codex after completing these steps.')}
+            </AlertDescription>
+          </Alert>
+        </div>
+      ) : (
+        drawerContent
+      )}
+    </div>
+  )
+
+  if (props.embedded) return instructions
+
   return (
     <Sheet open={props.open} onOpenChange={props.onOpenChange}>
       <SheetContent
@@ -196,123 +306,7 @@ export function CodexConfigDrawer(props: CodexConfigDrawerProps) {
           </SheetDescription>
         </SheetHeader>
 
-        <div className={sideDrawerFormClassName('gap-4')}>
-          <FieldSet>
-            <FieldLegend variant='label'>
-              {t('Configuration method')}
-            </FieldLegend>
-            <RadioGroup
-              value={configurationMethod}
-              onValueChange={setConfigurationMethod}
-            >
-              <FieldGroup className='gap-3 sm:flex-row'>
-                <Field orientation='horizontal'>
-                  <RadioGroupItem
-                    value='cc-switch'
-                    id='codex-method-cc-switch'
-                  />
-                  <FieldLabel
-                    htmlFor='codex-method-cc-switch'
-                    className='font-normal'
-                  >
-                    CC Switch
-                  </FieldLabel>
-                </Field>
-                <Field orientation='horizontal'>
-                  <RadioGroupItem
-                    value='command-line'
-                    id='codex-method-command-line'
-                  />
-                  <FieldLabel
-                    htmlFor='codex-method-command-line'
-                    className='font-normal'
-                  >
-                    {t('Command line')}
-                  </FieldLabel>
-                </Field>
-              </FieldGroup>
-            </RadioGroup>
-          </FieldSet>
-          {configurationMethod === 'cc-switch' ? (
-            <div className='flex flex-col gap-4'>
-              <Alert>
-                <AlertTitle>{t('Before you begin')}</AlertTitle>
-                <AlertDescription>
-                  {t(
-                    'Quit ChatGPT and Codex completely before editing the provider configuration.'
-                  )}
-                </AlertDescription>
-              </Alert>
-
-              <figure className='space-y-2'>
-                <figcaption>
-                  <h3 className='font-medium'>
-                    {t('1: Open the provider form')}
-                  </h3>
-                  <p className='text-muted-foreground text-sm'>
-                    {t(
-                      'In CC Switch, select Codex, then click the plus button to add a provider.'
-                    )}
-                  </p>
-                </figcaption>
-                <img
-                  src={ccSwitchOpenProviderScreenshot}
-                  alt={t('CC Switch setup step 1')}
-                  width={893}
-                  height={345}
-                  className='h-auto w-full rounded-lg border'
-                />
-              </figure>
-
-              <figure className='space-y-2'>
-                <figcaption>
-                  <h3 className='font-medium'>
-                    {t('2: Enter provider details')}
-                  </h3>
-                  <p className='text-muted-foreground text-sm'>
-                    {t(
-                      'Enter the provider name, API key, API request URL, and default model. Select Responses (native), then add the provider.'
-                    )}
-                  </p>
-                </figcaption>
-                <img
-                  src={ccSwitchAddProviderScreenshot}
-                  alt={t('CC Switch setup step 2')}
-                  width={900}
-                  height={1099}
-                  className='h-auto w-full rounded-lg border'
-                />
-              </figure>
-
-              <figure className='space-y-2'>
-                <figcaption>
-                  <h3 className='font-medium'>
-                    {t('3: Enable the provider')}
-                  </h3>
-                  <p className='text-muted-foreground text-sm'>
-                    {t(
-                      'Find the new provider in the Codex list and click Enable.'
-                    )}
-                  </p>
-                </figcaption>
-                <img
-                  src={ccSwitchConfigureProviderScreenshot}
-                  alt={t('CC Switch setup step 3')}
-                  className='h-auto w-full rounded-lg border'
-                />
-              </figure>
-
-              <Alert>
-                <AlertTitle>{t('Restart Codex')}</AlertTitle>
-                <AlertDescription>
-                  {t('Restart ChatGPT and Codex after completing these steps.')}
-                </AlertDescription>
-              </Alert>
-            </div>
-          ) : (
-            drawerContent
-          )}
-        </div>
+        <div className={sideDrawerFormClassName('gap-4')}>{instructions}</div>
 
         <SheetFooter className={sideDrawerFooterClassName('grid-cols-1')}>
           <SheetClose render={<Button variant='outline' />}>

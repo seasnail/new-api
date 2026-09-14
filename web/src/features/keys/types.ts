@@ -111,6 +111,5 @@ export type ApiKeysDialogType =
   | 'delete'
   | 'batch-delete'
   | 'cc-switch'
-  | 'codex-config'
-  | 'claude-config'
+  | 'application-config'
   | 'test'

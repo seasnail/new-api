@@ -20,9 +20,8 @@ import { ApiKeysDeleteDialog } from './api-keys-delete-dialog'
 import { ApiKeysMutateDrawer } from './api-keys-mutate-drawer'
 import { useApiKeys } from './api-keys-provider'
 import { ApiKeyTestDrawer } from './dialogs/api-key-test-drawer'
+import { ApplicationConfigDrawer } from './dialogs/application-config-drawer'
 import { CCSwitchDialog } from './dialogs/cc-switch-dialog'
-import { ClaudeConfigDrawer } from './dialogs/claude-config-drawer'
-import { CodexConfigDrawer } from './dialogs/codex-config-drawer'
 
 export function ApiKeysDialogs() {
   const { open, setOpen, currentRow, resolvedKey } = useApiKeys()
@@ -44,17 +43,12 @@ export function ApiKeysDialogs() {
       )}
       <CCSwitchDialog
         open={open === 'cc-switch'}
+        apiKey={currentRow ?? undefined}
         onOpenChange={(isOpen) => !isOpen && setOpen(null)}
         tokenKey={resolvedKey}
       />
-      <CodexConfigDrawer
-        open={open === 'codex-config'}
-        onOpenChange={(isOpen) => !isOpen && setOpen(null)}
-        apiKey={currentRow}
-        tokenKey={resolvedKey}
-      />
-      {open === 'claude-config' && (
-        <ClaudeConfigDrawer
+      {open === 'application-config' && currentRow && (
+        <ApplicationConfigDrawer
           open
           onOpenChange={(isOpen) => !isOpen && setOpen(null)}
           apiKey={currentRow}
