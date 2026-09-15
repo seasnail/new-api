@@ -107,7 +107,7 @@ test('imports each application with its compatible allowed model and provider de
 test('disables import when no compatible model is available', async () => {
   mocks.getUserModels.mockResolvedValue({
     success: true,
-    data: ['claude-sonnet'],
+    data: [],
   })
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -117,7 +117,7 @@ test('disables import when no compatible model is available', async () => {
       <ApplicationsConfiguration apiKey={apiKey} />
     </QueryClientProvider>
   )
-  expect(await screen.findByText('No models found')).toBeInTheDocument()
+  expect(await screen.findByRole('alert')).toHaveClass('text-destructive')
   expect(
     screen.getByRole('button', { name: 'Import to CC Switch' })
   ).toBeDisabled()
@@ -126,7 +126,7 @@ test('disables import when no compatible model is available', async () => {
 test('switches between embedded Codex and Claude setup with the selected API key', async () => {
   mocks.getUserModels.mockResolvedValue({
     success: true,
-    data: ['codex-model', 'claude-model'],
+    data: ['gpt-model', 'claude-model'],
   })
   const user = userEvent.setup()
   const client = new QueryClient({
@@ -155,7 +155,7 @@ test('switches between embedded Codex and Claude setup with the selected API key
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   await user.click(screen.getByRole('radio', { name: 'Command line' }))
   expect(
-    await screen.findByText((text) => text.includes('model = "codex-model"'))
+    await screen.findByText((text) => text.includes('model = "gpt-model"'))
   ).toBeInTheDocument()
   expect(document.body).toHaveTextContent('sk-quick-start')
   await user.click(screen.getByRole('tab', { name: 'Claude' }))
@@ -185,4 +185,41 @@ test('switches between embedded Codex and Claude setup with the selected API key
     )
   ).toBeInTheDocument()
   expect(document.body).toHaveTextContent('sk-quick-start')
+})
+
+test('defaults to a compatible application and warns on incompatible selection', async () => {
+  mocks.getUserModels.mockResolvedValue({
+    success: true,
+    data: ['gpt-blocked', 'claude-sonnet', 'gemini-pro'],
+  })
+  const user = userEvent.setup()
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  const restrictedKey = {
+    ...apiKey,
+    model_limits_enabled: true,
+    model_limits: 'claude-sonnet',
+  }
+  render(
+    <QueryClientProvider client={client}>
+      <ApplicationsConfiguration apiKey={restrictedKey} />
+    </QueryClientProvider>
+  )
+  await waitFor(() =>
+    expect(screen.getByLabelText(/Primary Model/)).toHaveValue('claude-sonnet')
+  )
+
+  expect(screen.getByRole('tab', { name: 'Claude' })).toHaveAttribute(
+    'aria-selected',
+    'true'
+  )
+  await user.click(screen.getByRole('tab', { name: 'Codex' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'no model available for selected application, please choose other keys support the model or other compatible application'
+  )
+  expect(screen.getByRole('alert')).toHaveClass('text-destructive')
+  expect(
+    screen.getByRole('button', { name: 'Import to CC Switch' })
+  ).toBeDisabled()
 })

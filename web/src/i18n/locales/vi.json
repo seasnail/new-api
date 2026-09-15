@@ -3135,6 +3135,7 @@
     "No matching token and channel usage was found.": "Không tìm thấy mức sử dụng token và kênh phù hợp.",
     "No messages yet": "Chưa có tin nhắn",
     "No missing models found.": "Không tìm thấy mô hình nào bị thiếu.",
+    "no model available for selected application, please choose other keys support the model or other compatible application": "Không có mô hình khả dụng cho ứng dụng đã chọn. Vui lòng chọn khóa khác hỗ trợ mô hình hoặc ứng dụng tương thích khác.",
     "No model found.": "Không tìm thấy mô hình.",
     "No model mappings configured. Click \"Add Mapping\" to get started.": "Chưa có ánh xạ mô hình nào được cấu hình. Nhấp vào \"Thêm ánh xạ\" để bắt đầu.",
     "No model price changes to save": "Không có thay đổi giá mô hình nào cần lưu",

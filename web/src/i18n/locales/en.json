@@ -3135,6 +3135,7 @@
     "No matching token and channel usage was found.": "No matching token and channel usage was found.",
     "No messages yet": "No messages yet",
     "No missing models found.": "No missing models found.",
+    "no model available for selected application, please choose other keys support the model or other compatible application": "no model available for selected application, please choose other keys support the model or other compatible application",
     "No model found.": "No model found.",
     "No model mappings configured. Click \"Add Mapping\" to get started.": "No model mappings configured. Click \"Add Mapping\" to get started.",
     "No model price changes to save": "No model price changes to save",

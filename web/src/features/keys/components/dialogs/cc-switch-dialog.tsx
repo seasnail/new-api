@@ -16,8 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useQuery } from '@tanstack/react-query'
-import { useState, useEffect, useMemo, useId } from 'react'
+import { useState, useEffect, useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -39,8 +38,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { getUserModels } from '@/lib/api'
 
+import { useApplicationModels } from '../../lib/use-application-models'
 import type { ApiKey } from '../../types'
 
 const APP_CONFIGS = {
@@ -115,37 +114,23 @@ interface Props {
 export function CCSwitchDialog(props: Props) {
   const { t } = useTranslation()
   const id = useId()
-  const [app, setApp] = useState<AppType>(props.application ?? 'claude')
+  const [chosenApp, setApp] = useState<AppType | null>(null)
   const [name, setName] = useState<string>('One-Gateway')
   const [models, setModels] = useState<Record<string, string>>({})
 
-  const {
-    data: modelsData,
-    isLoading,
-    isError,
-  } = useQuery({
-    queryKey: ['user-models-ccswitch', props.apiKey?.group],
-    queryFn: async () => {
-      const result = await getUserModels(props.apiKey?.group || undefined)
-      if (!result.success) throw new Error(result.message)
-      return result
-    },
-    enabled: props.open,
-    staleTime: 5 * 60 * 1000,
-  })
-
-  const modelOptions = useMemo(() => {
-    const allowed = props.apiKey?.model_limits_enabled
-      ? new Set((props.apiKey.model_limits ?? '').split(',').filter(Boolean))
-      : null
-    const items = (modelsData?.data ?? []).filter((model) => {
-      let compatible = /(^|[/:])claude-/i.test(model)
-      if (app === 'codex') compatible = /(^|[/:])gpt-/i.test(model)
-      if (app === 'gemini') compatible = /(^|[/:])gemini-/i.test(model)
-      return compatible && (!allowed || allowed.has(model))
-    })
-    return items.map((m) => ({ value: m, label: m }))
-  }, [modelsData?.data, props.apiKey, app])
+  const { modelsByApp, isLoading, isError } = useApplicationModels(
+    props.apiKey,
+    props.open
+  )
+  const defaultApp =
+    (Object.keys(APP_CONFIGS) as AppType[]).find(
+      (candidate) => modelsByApp[candidate].length > 0
+    ) ?? 'claude'
+  const app = props.application ?? chosenApp ?? defaultApp
+  const modelOptions = modelsByApp[app].map((model) => ({
+    value: model,
+    label: model,
+  }))
   const selectedModels = { ...models }
   for (const key of Object.keys(selectedModels)) {
     if (!modelOptions.some((option) => option.value === selectedModels[key])) {
@@ -159,7 +144,7 @@ export function CCSwitchDialog(props: Props) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setModels({})
 
-      setApp('claude')
+      setApp(null)
 
       setName(APP_CONFIGS.claude.defaultName)
     }
@@ -228,6 +213,12 @@ export function CCSwitchDialog(props: Props) {
         />
       </div>
 
+      {isError ? (
+        <p role='alert' className='text-destructive text-sm'>
+          {t('Failed to fetch models')}
+        </p>
+      ) : null}
+
       {currentConfig.modelFields.map((field) => (
         <div key={field.key} className='space-y-2'>
           <Label htmlFor={`${id}-${field.key}`}>
@@ -251,22 +242,40 @@ export function CCSwitchDialog(props: Props) {
     </div>
   )
 
+  const noCompatibleModels = !isLoading && !isError && modelOptions.length === 0
+  const importActions = (
+    <div
+      role='group'
+      aria-label={t('Import to CC Switch')}
+      className='flex min-w-0 items-center gap-3'
+    >
+      <Button
+        className='shrink-0'
+        onClick={handleSubmit}
+        aria-describedby={noCompatibleModels ? id + '-no-models' : undefined}
+        disabled={isLoading || isError || !selectedModels.model || !name.trim()}
+      >
+        {props.embedded ? t('Import to CC Switch') : t('Open CC Switch')}
+      </Button>
+      {noCompatibleModels ? (
+        <p
+          id={id + '-no-models'}
+          role='alert'
+          className='text-destructive min-w-0 text-sm'
+        >
+          {t(
+            'no model available for selected application, please choose other keys support the model or other compatible application'
+          )}
+        </p>
+      ) : null}
+    </div>
+  )
+
   if (props.embedded) {
     return (
       <div className='space-y-4'>
         {formContent}
-        {isError ? <p role='alert'>{t('Failed to fetch models')}</p> : null}
-        {!isLoading && !isError && modelOptions.length === 0 ? (
-          <p>{t('No models found')}</p>
-        ) : null}
-        <Button
-          onClick={handleSubmit}
-          disabled={
-            isLoading || isError || !selectedModels.model || !name.trim()
-          }
-        >
-          {t('Import to CC Switch')}
-        </Button>
+        {importActions}
         <p className='text-muted-foreground text-sm'>
           {t('Restart the application after the import is complete.')}
         </p>
@@ -283,18 +292,15 @@ export function CCSwitchDialog(props: Props) {
 
         <div className={sideDrawerFormClassName()}>{formContent}</div>
 
-        <SheetFooter className={sideDrawerFooterClassName()}>
+        <SheetFooter
+          className={sideDrawerFooterClassName(
+            'flex flex-col items-stretch sm:flex-col'
+          )}
+        >
           <SheetClose render={<Button variant='outline' />}>
             {t('Cancel')}
           </SheetClose>
-          <Button
-            onClick={handleSubmit}
-            disabled={
-              isLoading || isError || !selectedModels.model || !name.trim()
-            }
-          >
-            {t('Open CC Switch')}
-          </Button>
+          {importActions}
         </SheetFooter>
       </SheetContent>
     </Sheet>

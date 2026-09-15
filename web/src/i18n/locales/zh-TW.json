@@ -3135,6 +3135,7 @@
     "No matching token and channel usage was found.": "未找到匹配的令牌與渠道用量。",
     "No messages yet": "暫無訊息",
     "No missing models found.": "未找到缺失的模型。",
+    "no model available for selected application, please choose other keys support the model or other compatible application": "所選應用程式沒有可用模型，請選擇支援所需模型的其他金鑰或其他相容的應用程式。",
     "No model found.": "未找到模型。",
     "No model mappings configured. Click \"Add Mapping\" to get started.": "未設定模型映射。點擊「新增映射」即可開始使用。",
     "No model price changes to save": "沒有模型價格變更需要儲存",

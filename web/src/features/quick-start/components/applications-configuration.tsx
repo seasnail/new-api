@@ -17,6 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { ChevronDown } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -29,17 +30,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CCSwitchDialog } from '@/features/keys/components/dialogs/cc-switch-dialog'
 import { ClaudeConfigDrawer } from '@/features/keys/components/dialogs/claude-config-drawer'
 import { CodexConfigDrawer } from '@/features/keys/components/dialogs/codex-config-drawer'
+import { useApplicationModels } from '@/features/keys/lib/use-application-models'
 import type { ApiKey } from '@/features/keys/types'
 
 export function ApplicationsConfiguration(props: { apiKey: ApiKey }) {
   const { t } = useTranslation()
+  const [chosenApp, setChosenApp] = useState<string | null>(null)
+  const { modelsByApp } = useApplicationModels(props.apiKey)
+  const defaultApp =
+    modelsByApp.codex.length === 0 && modelsByApp.claude.length > 0
+      ? 'claude'
+      : 'codex'
   return (
     <Card>
       <CardHeader>
         <CardTitle>{t('Configure Applications')}</CardTitle>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue='codex'>
+        <Tabs value={chosenApp ?? defaultApp} onValueChange={setChosenApp}>
           <TabsList aria-label={t('Application')}>
             <TabsTrigger value='codex'>Codex</TabsTrigger>
             <TabsTrigger value='claude'>Claude</TabsTrigger>

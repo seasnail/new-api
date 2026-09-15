@@ -3135,6 +3135,7 @@
     "No matching token and channel usage was found.": "Aucune utilisation correspondante par jeton et canal n'a été trouvée.",
     "No messages yet": "Pas encore de messages",
     "No missing models found.": "Aucun modèle manquant trouvé.",
+    "no model available for selected application, please choose other keys support the model or other compatible application": "Aucun modèle disponible pour l’application sélectionnée. Choisissez une autre clé prenant en charge le modèle ou une autre application compatible.",
     "No model found.": "Aucun modèle trouvé.",
     "No model mappings configured. Click \"Add Mapping\" to get started.": "Aucun mappage de modèle configuré. Cliquez sur « Ajouter un mappage » pour commencer.",
     "No model price changes to save": "Aucun changement de prix de modèle à sauvegarder",

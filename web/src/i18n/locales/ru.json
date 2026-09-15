@@ -3135,6 +3135,7 @@
     "No matching token and channel usage was found.": "Подходящее использование токенов и каналов не найдено.",
     "No messages yet": "Сообщений пока нет",
     "No missing models found.": "Недостающие модели не найдены.",
+    "no model available for selected application, please choose other keys support the model or other compatible application": "Для выбранного приложения нет доступных моделей. Выберите другой ключ с поддержкой нужной модели или другое совместимое приложение.",
     "No model found.": "Модель не найдена.",
     "No model mappings configured. Click \"Add Mapping\" to get started.": "Не настроены сопоставления моделей. Нажмите \"Добавить сопоставление\", чтобы начать.",
     "No model price changes to save": "Нет изменений цен моделей для сохранения",
