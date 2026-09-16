@@ -344,8 +344,7 @@ export function Dashboard() {
         }
         onFinish={() =>
           navigate({
-            to: '/dashboard/$section',
-            params: { section: 'models' },
+            to: '/keys',
           })
         }
       />

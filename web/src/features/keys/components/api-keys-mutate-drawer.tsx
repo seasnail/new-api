@@ -212,8 +212,8 @@ export function ApiKeysMutateDrawer({
       ? Number(autoGroupsData?.data?.max_count)
       : 5
   const schema = useMemo(
-    () => getApiKeyFormSchema(t, maxAutoGroups),
-    [t, maxAutoGroups]
+    () => getApiKeyFormSchema(t, maxAutoGroups, embedded && !isUpdate),
+    [t, maxAutoGroups, embedded, isUpdate]
   )
 
   const form = useForm<ApiKeyFormValues>({
@@ -592,7 +592,11 @@ export function ApiKeysMutateDrawer({
                     }))}
                     selected={field.value}
                     onChange={field.onChange}
-                    placeholder={t('Select models (empty for allow all)')}
+                    placeholder={
+                      embedded && !isUpdate
+                        ? t('Please select at least one model')
+                        : t('Select models (empty for allow all)')
+                    }
                   />
                 </FormControl>
                 <FormDescription>

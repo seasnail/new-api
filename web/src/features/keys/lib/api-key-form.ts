@@ -28,7 +28,11 @@ import type { ApiKey, ApiKeyFormData } from '../types'
 // Form Schema
 // ============================================================================
 
-export function getApiKeyFormSchema(t: TFunction, maxAutoGroups = 5) {
+export function getApiKeyFormSchema(
+  t: TFunction,
+  maxAutoGroups = 5,
+  requireModels = false
+) {
   const autoGroupLimit =
     Number.isInteger(maxAutoGroups) && maxAutoGroups > 0 ? maxAutoGroups : 5
 
@@ -38,7 +42,9 @@ export function getApiKeyFormSchema(t: TFunction, maxAutoGroups = 5) {
       remain_quota_dollars: z.number().optional(),
       expired_time: z.date().optional(),
       unlimited_quota: z.boolean(),
-      model_limits: z.array(z.string()),
+      model_limits: z
+        .array(z.string())
+        .min(requireModels ? 1 : 0, t('Please select at least one model')),
       allow_ips: z.string().optional(),
       group: z.string().optional(),
       auto_groups_mode: z.enum(['inherit', 'custom']),

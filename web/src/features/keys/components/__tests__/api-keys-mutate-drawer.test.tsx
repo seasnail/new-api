@@ -1,3 +1,4 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 /*
 Copyright (C) 2023-2026 QuantumNous
 
@@ -16,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 
 const { createInstance } = await import('i18next')
@@ -425,4 +426,36 @@ describe('API keys mutate drawer create group behavior', () => {
       )
     ).toBe(false)
   })
+})
+
+test('Quick Start rejects an empty model selection and allows continuing after selecting a model', async () => {
+  const createdPayloads: Array<Record<string, unknown>> = []
+  const onCreated = vi.fn()
+  installApiFixtures(createdPayloads)
+  await renderCreateDrawer({ embedded: true, onCreated })
+  const user = userEvent.setup()
+  fireEvent.input(getControlByLabel('Name'), {
+    target: { value: 'onboarding-key' },
+  })
+  const models = screen.getByRole('combobox', {
+    name: 'Please select at least one model',
+  })
+  await user.click(models)
+  await user.keyboard('{Backspace}{Backspace}{Escape}')
+  await user.click(
+    screen.getByRole('button', { name: 'Create API Key and continue' })
+  )
+  expect(
+    await screen.findByText('Please select at least one model')
+  ).toBeVisible()
+  expect(createdPayloads).toHaveLength(0)
+  expect(onCreated).not.toHaveBeenCalled()
+  await user.click(models)
+  await user.click(await screen.findByRole('option', { name: 'gpt-4o' }))
+  await user.keyboard('{Escape}')
+  await user.click(
+    screen.getByRole('button', { name: 'Create API Key and continue' })
+  )
+  await waitFor(() => expect(onCreated).toHaveBeenCalled())
+  expect(createdPayloads[0].model_limits).toBe('gpt-4o')
 })
