@@ -17,6 +17,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterContextProvider,
+} from '@tanstack/react-router'
+import {
   flexRender,
   getCoreRowModel,
   useReactTable,
@@ -44,6 +50,10 @@ const user: User = {
 }
 
 function UserRow(props: { user: User }) {
+  const router = createRouter({
+    routeTree: createRootRoute(),
+    history: createMemoryHistory(),
+  })
   const columns = useUsersColumns()
   const table = useReactTable({
     data: [props.user],
@@ -51,19 +61,21 @@ function UserRow(props: { user: User }) {
     getCoreRowModel: getCoreRowModel(),
   })
   return (
-    <UsersProvider>
-      {table
-        .getRowModel()
-        .rows[0].getVisibleCells()
-        .filter((cell) =>
-          ['username', 'status', 'actions'].includes(cell.column.id)
-        )
-        .map((cell) => (
-          <div key={cell.id}>
-            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-          </div>
-        ))}
-    </UsersProvider>
+    <RouterContextProvider router={router}>
+      <UsersProvider>
+        {table
+          .getRowModel()
+          .rows[0].getVisibleCells()
+          .filter((cell) =>
+            ['username', 'status', 'actions'].includes(cell.column.id)
+          )
+          .map((cell) => (
+            <div key={cell.id}>
+              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            </div>
+          ))}
+      </UsersProvider>
+    </RouterContextProvider>
   )
 }
 
