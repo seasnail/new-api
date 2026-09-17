@@ -157,29 +157,29 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         <TooltipContent>{t('Edit')}</TooltipContent>
       </Tooltip>
 
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant='ghost'
+              size='icon-sm'
+              onClick={() => handleManage(isDisabled ? 'enable' : 'disable')}
+              disabled={isRoot}
+              aria-label={isDisabled ? t('Enable') : t('Disable')}
+            />
+          }
+        >
+          {isDisabled ? <Power /> : <PowerOff />}
+        </TooltipTrigger>
+        <TooltipContent>
+          {isDisabled ? t('Enable') : t('Disable')}
+        </TooltipContent>
+      </Tooltip>
+
       <DataTableRowActionMenu
         ariaLabel={t('Open menu')}
         contentClassName='w-48'
       >
-        {isDisabled ? (
-          <DropdownMenuItem onClick={() => handleManage('enable')}>
-            {t('Enable')}
-            <DropdownMenuShortcut>
-              <Power size={16} />
-            </DropdownMenuShortcut>
-          </DropdownMenuItem>
-        ) : (
-          <DropdownMenuItem
-            onClick={() => handleManage('disable')}
-            disabled={isRoot}
-          >
-            {t('Disable')}
-            <DropdownMenuShortcut>
-              <PowerOff size={16} />
-            </DropdownMenuShortcut>
-          </DropdownMenuItem>
-        )}
-
         {isAdmin && !isRoot && (
           <DropdownMenuItem onClick={() => handleManage('demote')}>
             {t('Demote')}

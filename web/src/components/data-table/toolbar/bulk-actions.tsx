@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { type Table } from '@tanstack/react-table'
+import type { Table } from '@tanstack/react-table'
 import { X } from 'lucide-react'
 import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -35,6 +35,7 @@ type DataTableBulkActionsProps<TData> = {
   table: Table<TData>
   entityName: string
   children: React.ReactNode
+  placement?: 'floating' | 'inline'
 }
 
 /**
@@ -51,6 +52,7 @@ export function DataTableBulkActions<TData>({
   table,
   entityName,
   children,
+  placement = 'floating',
 }: DataTableBulkActionsProps<TData>): React.ReactNode | null {
   const { t } = useTranslation()
   const selectedRows = table.getFilteredSelectedRowModel().rows
@@ -84,8 +86,8 @@ export function DataTableBulkActions<TData>({
     const buttons = buttonsRef.current
     if (!buttons) return
 
-    const currentIndex = Array.from(buttons).findIndex(
-      (button) => button === document.activeElement
+    const currentIndex = [...buttons].indexOf(
+      document.activeElement as HTMLButtonElement
     )
 
     switch (event.key) {
@@ -108,7 +110,7 @@ export function DataTableBulkActions<TData>({
         break
       case 'End':
         event.preventDefault()
-        buttons[buttons.length - 1]?.focus()
+        buttons.item(buttons.length - 1)?.focus()
         break
       case 'Escape': {
         // Check if the Escape key came from a dropdown trigger or content
@@ -166,17 +168,18 @@ export function DataTableBulkActions<TData>({
         tabIndex={-1}
         onKeyDown={handleKeyDown}
         className={cn(
-          'fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl',
-          'transition-all delay-100 duration-300 ease-out hover:scale-105',
+          placement === 'floating' &&
+            'fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl transition-all delay-100 duration-300 ease-out hover:scale-105',
+          placement === 'inline' && 'min-w-0',
           'focus-visible:ring-ring/50 focus-visible:ring-2 focus-visible:outline-none'
         )}
       >
         <div
           className={cn(
-            'p-2 shadow-xl',
-            'rounded-xl border',
-            'bg-background/95 supports-[backdrop-filter]:bg-background/60 backdrop-blur-lg',
-            'flex items-center gap-x-2'
+            placement === 'floating' &&
+              'p-2 shadow-xl rounded-xl border bg-background/95 supports-[backdrop-filter]:bg-background/60 backdrop-blur-lg',
+            'flex items-center gap-x-2',
+            placement === 'inline' && 'flex-wrap gap-y-2'
           )}
         >
           <Tooltip>

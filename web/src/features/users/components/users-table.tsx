@@ -35,6 +35,7 @@ import { useTableUrlState } from '@/hooks/use-table-url-state'
 import { getUsers, searchUsers } from '../api'
 import {
   USER_STATUS,
+  USER_ROLE,
   getUserStatusOptions,
   getUserRoleOptions,
   isUserDeleted,
@@ -173,7 +174,9 @@ export function UsersTable() {
   const { table } = useDataTable({
     data: users,
     columns,
-    enableRowSelection: true,
+    getRowId: (user) => String(user.id),
+    enableRowSelection: (row) =>
+      !isUserDeleted(row.original) && row.original.role !== USER_ROLE.ROOT,
     columnFilters,
     globalFilter,
     pagination,
@@ -215,6 +218,7 @@ export function UsersTable() {
       skeletonKeyPrefix='users-skeleton'
       applyHeaderSize
       toolbarProps={{
+        preActions: <DataTableBulkActions table={table} />,
         searchPlaceholder: t('Filter by username, name or email...'),
         searchDebounceMs: 500,
         filters: [
@@ -232,14 +236,10 @@ export function UsersTable() {
           },
         ],
       }}
-      getRowClassName={(row, { isMobile }) =>
-        isDisabledUserRow(row.original)
-          ? isMobile
-            ? DISABLED_ROW_MOBILE
-            : DISABLED_ROW_DESKTOP
-          : undefined
-      }
-      bulkActions={<DataTableBulkActions table={table} />}
+      getRowClassName={(row, { isMobile }) => {
+        if (!isDisabledUserRow(row.original)) return undefined
+        return isMobile ? DISABLED_ROW_MOBILE : DISABLED_ROW_DESKTOP
+      }}
     />
   )
 }

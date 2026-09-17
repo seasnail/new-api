@@ -31,6 +31,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { formatQuota, formatTimestamp } from '@/lib/format'
+import { cn } from '@/lib/utils'
 
 import {
   USER_STATUS,
@@ -59,6 +60,7 @@ export function useUsersColumns(): ColumnDef<User>[] {
       cell: ({ row }) => (
         <Checkbox
           checked={row.getIsSelected()}
+          disabled={!row.getCanSelect()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
           aria-label='Select row'
           className='translate-y-[2px]'
@@ -93,7 +95,12 @@ export function useUsersColumns(): ColumnDef<User>[] {
         return (
           <div className='flex min-w-[160px] flex-col gap-1'>
             <div className='flex items-center gap-2'>
-              <LongText className='max-w-[140px] font-medium'>
+              <LongText
+                className={cn('max-w-[140px] font-medium', {
+                  'text-destructive':
+                    row.original.status === USER_STATUS.DISABLED,
+                })}
+              >
                 {username}
               </LongText>
               {remark && (
@@ -110,7 +117,14 @@ export function useUsersColumns(): ColumnDef<User>[] {
               )}
             </div>
             {displayName && displayName !== username && (
-              <LongText className='text-muted-foreground max-w-[180px] text-xs'>
+              <LongText
+                className={cn(
+                  'max-w-[180px] text-xs',
+                  row.original.status === USER_STATUS.DISABLED
+                    ? 'text-destructive'
+                    : 'text-muted-foreground'
+                )}
+              >
                 {displayName}
               </LongText>
             )}
