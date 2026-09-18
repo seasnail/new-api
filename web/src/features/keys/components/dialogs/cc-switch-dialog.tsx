@@ -16,6 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect, useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -38,6 +39,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { getPricing } from '@/features/pricing/api'
 
 import { useApplicationModels } from '../../lib/use-application-models'
 import type { ApiKey } from '../../types'
@@ -122,6 +124,13 @@ export function CCSwitchDialog(props: Props) {
     props.apiKey,
     props.open
   )
+  const pricing = useQuery({
+    queryKey: ['pricing'],
+    queryFn: getPricing,
+    enabled: props.open,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  })
   const defaultApp =
     (Object.keys(APP_CONFIGS) as AppType[]).find(
       (candidate) => modelsByApp[candidate].length > 0
@@ -137,7 +146,40 @@ export function CCSwitchDialog(props: Props) {
       delete selectedModels[key]
     }
   }
-  selectedModels.model ||= modelOptions[0]?.value ?? ''
+  let defaultModel = modelOptions[0]?.value ?? ''
+  let lowestInputPrice = Infinity
+  let lowestOutputPrice = Infinity
+  const availableModels = new Set(modelsByApp[app])
+  // Per-request and dynamic prices cannot be compared as token prices.
+  for (const model of pricing.data?.success ? pricing.data.data : []) {
+    if (
+      !availableModels.has(model.model_name) ||
+      model.quota_type !== 0 ||
+      model.billing_mode === 'tiered_expr'
+    ) {
+      continue
+    }
+    const inputPrice = model.model_ratio
+    const outputPrice = inputPrice * model.completion_ratio
+    if (
+      !Number.isFinite(inputPrice) ||
+      inputPrice < 0 ||
+      !Number.isFinite(model.completion_ratio) ||
+      model.completion_ratio < 0 ||
+      !Number.isFinite(outputPrice)
+    ) {
+      continue
+    }
+    if (
+      inputPrice < lowestInputPrice ||
+      (inputPrice === lowestInputPrice && outputPrice < lowestOutputPrice)
+    ) {
+      defaultModel = model.model_name
+      lowestInputPrice = inputPrice
+      lowestOutputPrice = outputPrice
+    }
+  }
+  selectedModels.model ||= defaultModel
 
   useEffect(() => {
     if (props.open && !props.embedded) {
@@ -253,7 +295,13 @@ export function CCSwitchDialog(props: Props) {
         className='shrink-0'
         onClick={handleSubmit}
         aria-describedby={noCompatibleModels ? id + '-no-models' : undefined}
-        disabled={isLoading || isError || !selectedModels.model || !name.trim()}
+        disabled={
+          isLoading ||
+          pricing.isLoading ||
+          isError ||
+          !selectedModels.model ||
+          !name.trim()
+        }
       >
         {props.embedded ? t('Import to CC Switch') : t('Open CC Switch')}
       </Button>

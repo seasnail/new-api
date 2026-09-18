@@ -19,7 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
 import type { ApiKey } from '@/features/keys/types'
 
@@ -27,9 +27,11 @@ import { ApplicationsConfiguration } from '../applications-configuration'
 
 const mocks = vi.hoisted(() => ({
   getUserModels: vi.fn(),
+  getPricing: vi.fn(),
 }))
 
 vi.mock('@/lib/api', () => ({ getUserModels: mocks.getUserModels }))
+vi.mock('@/features/pricing/api', () => ({ getPricing: mocks.getPricing }))
 vi.mock('@/hooks/use-status', () => ({
   useStatus: () => ({ status: { server_address: 'https://api.example.com' } }),
 }))
@@ -52,6 +54,10 @@ const apiKey: ApiKey = {
   model_limits: '',
   allow_ips: '',
 }
+
+beforeEach(() => {
+  mocks.getPricing.mockResolvedValue({ success: true, data: [] })
+})
 
 afterEach(() => vi.restoreAllMocks())
 

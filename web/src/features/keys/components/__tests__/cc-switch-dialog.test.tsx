@@ -19,16 +19,18 @@ For commercial licensing, please contact support@quantumnous.com
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 
 import { CCSwitchDialog } from '@/features/keys/components/dialogs/cc-switch-dialog'
 import type { ApiKey } from '@/features/keys/types'
 
 const mocks = vi.hoisted(() => ({
   getUserModels: vi.fn(),
+  getPricing: vi.fn(),
 }))
 
 vi.mock('@/lib/api', () => ({ getUserModels: mocks.getUserModels }))
+vi.mock('@/features/pricing/api', () => ({ getPricing: mocks.getPricing }))
 
 const apiKey: ApiKey = {
   id: 42,
@@ -49,7 +51,199 @@ const apiKey: ApiKey = {
   allow_ips: '',
 }
 
+beforeEach(() => {
+  mocks.getPricing.mockResolvedValue({ success: true, data: [] })
+})
+
 afterEach(() => vi.restoreAllMocks())
+
+test('imports the cheapest allowed token model, breaking input-price ties by output price', async () => {
+  mocks.getUserModels.mockResolvedValue({
+    success: true,
+    data: [
+      'gpt-expensive',
+      'gpt-cheap-input',
+      'gpt-cheapest',
+      'gpt-blocked',
+      'claude-free',
+      'gpt-dynamic',
+      'gpt-request',
+      'gpt-invalid',
+    ],
+  })
+  mocks.getPricing.mockResolvedValue({
+    success: true,
+    data: [
+      {
+        model_name: 'gpt-expensive',
+        quota_type: 0,
+        model_ratio: 2,
+        completion_ratio: 1,
+      },
+      {
+        model_name: 'gpt-cheap-input',
+        quota_type: 0,
+        model_ratio: 1,
+        completion_ratio: 4,
+      },
+      {
+        model_name: 'gpt-cheapest',
+        quota_type: 0,
+        model_ratio: 1,
+        completion_ratio: 2,
+      },
+      {
+        model_name: 'gpt-blocked',
+        quota_type: 0,
+        model_ratio: 0,
+        completion_ratio: 1,
+      },
+      {
+        model_name: 'claude-free',
+        quota_type: 0,
+        model_ratio: 0,
+        completion_ratio: 1,
+      },
+      {
+        model_name: 'gpt-dynamic',
+        quota_type: 0,
+        model_ratio: 0,
+        completion_ratio: 0,
+        billing_mode: 'tiered_expr',
+      },
+      {
+        model_name: 'gpt-request',
+        quota_type: 1,
+        model_ratio: 0,
+        completion_ratio: 0,
+      },
+      {
+        model_name: 'gpt-invalid',
+        quota_type: 0,
+        model_ratio: -1,
+        completion_ratio: 1,
+      },
+    ],
+  })
+  const open = vi.spyOn(window, 'open').mockReturnValue(null)
+  const user = userEvent.setup()
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  render(
+    <QueryClientProvider client={client}>
+      <CCSwitchDialog
+        open
+        embedded
+        application='codex'
+        onOpenChange={() => undefined}
+        apiKey={{
+          ...apiKey,
+          model_limits_enabled: true,
+          model_limits:
+            'gpt-expensive,gpt-cheap-input,gpt-cheapest,claude-free,gpt-dynamic,gpt-request,gpt-invalid',
+        }}
+        tokenKey={apiKey.key}
+      />
+    </QueryClientProvider>
+  )
+  const button = screen.getByRole('button', { name: 'Import to CC Switch' })
+  await waitFor(() => expect(button).toBeEnabled())
+  expect(screen.getByLabelText(/Primary Model/)).toHaveValue('gpt-cheapest')
+  await user.click(button)
+  expect(new URL(String(open.mock.calls[0][0])).searchParams.get('model')).toBe(
+    'gpt-cheapest'
+  )
+
+  await user.click(screen.getByLabelText(/Primary Model/))
+  await user.click(screen.getByRole('option', { name: 'gpt-expensive' }))
+  await user.click(button)
+  expect(new URL(String(open.mock.calls[1][0])).searchParams.get('model')).toBe(
+    'gpt-expensive'
+  )
+})
+
+test.each(['free', 'missing', 'failed'])(
+  'handles %s pricing without losing a usable default',
+  async (scenario) => {
+    mocks.getUserModels.mockResolvedValue({
+      success: true,
+      data: ['gpt-first', 'gpt-free'],
+    })
+    if (scenario === 'failed') {
+      mocks.getPricing.mockRejectedValue(new Error('Pricing unavailable'))
+    } else {
+      mocks.getPricing.mockResolvedValue({
+        success: true,
+        data:
+          scenario === 'free'
+            ? [
+                {
+                  model_name: 'gpt-free',
+                  quota_type: 0,
+                  model_ratio: 0,
+                  completion_ratio: 1,
+                },
+              ]
+            : [],
+      })
+    }
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={client}>
+        <CCSwitchDialog
+          open
+          application='codex'
+          onOpenChange={() => undefined}
+          apiKey={apiKey}
+          tokenKey={apiKey.key}
+        />
+      </QueryClientProvider>
+    )
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Open CC Switch' })
+      ).toBeEnabled()
+    )
+    expect(screen.getByLabelText(/Primary Model/)).toHaveValue(
+      scenario === 'free' ? 'gpt-free' : 'gpt-first'
+    )
+  }
+)
+
+test('waits for pricing before enabling import', async () => {
+  mocks.getUserModels.mockResolvedValue({ success: true, data: ['gpt-first'] })
+  let resolvePricing!: (value: { success: boolean; data: never[] }) => void
+  mocks.getPricing.mockReturnValue(
+    new Promise((resolve) => {
+      resolvePricing = resolve
+    })
+  )
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  render(
+    <QueryClientProvider client={client}>
+      <CCSwitchDialog
+        open
+        application='codex'
+        onOpenChange={() => undefined}
+        apiKey={apiKey}
+        tokenKey={apiKey.key}
+      />
+    </QueryClientProvider>
+  )
+  await waitFor(() =>
+    expect(screen.getByLabelText(/Primary Model/)).toHaveValue('gpt-first')
+  )
+  expect(screen.getByRole('button', { name: 'Open CC Switch' })).toBeDisabled()
+  resolvePricing({ success: true, data: [] })
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Open CC Switch' })).toBeEnabled()
+  )
+})
 
 test('defaults to a compatible application and warns on incompatible selection', async () => {
   mocks.getUserModels.mockResolvedValue({
