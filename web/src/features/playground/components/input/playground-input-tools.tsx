@@ -212,7 +212,7 @@ export function PlaygroundInputTools({
       <ConfirmDialog
         destructive
         desc={t(
-          'All playground messages saved in this browser will be removed. This cannot be undone.'
+          'All Quick Chat messages saved in this browser will be removed. This cannot be undone.'
         )}
         confirmText={t('Clear')}
         handleConfirm={handleClearMessages}

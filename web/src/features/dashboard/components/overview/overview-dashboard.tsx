@@ -509,7 +509,7 @@ export function OverviewDashboard() {
       },
       {
         title: t('Send a request'),
-        description: t('Verify routing with Playground or your client'),
+        description: t('Verify routing with Quick Chat or your client'),
         to: '/playground',
         icon: TerminalSquare,
         completed: requestCount > 0,
