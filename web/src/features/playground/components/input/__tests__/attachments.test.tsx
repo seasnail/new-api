@@ -72,12 +72,11 @@ function fileInput() {
 }
 
 describe('Playground file input', () => {
-  it('opens the file picker from the attachment menu', async () => {
+  it('opens the file picker directly from the attachment button with empty input', async () => {
     const user = userEvent.setup()
     render(<PlaygroundInput {...props} />)
     const click = vi.spyOn(fileInput(), 'click')
     await user.click(screen.getByRole('button', { name: 'Attach' }))
-    await user.click(screen.getByRole('menuitem', { name: 'Upload file' }))
     expect(click).toHaveBeenCalledOnce()
     expect(fileInput().accept).toContain('.pdf')
   })
