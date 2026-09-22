@@ -25,6 +25,7 @@ type InputControlStateOptions = {
   isModelLoading?: boolean
   models: ModelOption[]
   text: string
+  hasAttachments?: boolean
 }
 
 type InputControlState = {
@@ -55,11 +56,15 @@ export function getInputControlState({
   isModelLoading,
   models,
   text,
+  hasAttachments,
 }: InputControlStateOptions): InputControlState {
   const hasModels = models.length > 0
 
   return {
-    canSubmit: !disabled && hasModels && text.trim().length > 0,
+    canSubmit:
+      !disabled &&
+      hasModels &&
+      (text.trim().length > 0 || Boolean(hasAttachments)),
     isSelectorDisabled: Boolean(disabled || isModelLoading),
     shouldShowStop: Boolean(isGenerating && hasStopHandler),
   }

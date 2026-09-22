@@ -422,6 +422,33 @@ export function useChatHandler({
         ...message,
         model: config.model,
       }))
+      let attachmentError: string | undefined
+      if (messages.some((message) => message.versions[0]?.attachmentsOmitted)) {
+        attachmentError = t(
+          'Attachments are no longer available. Remove this message and attach the files again, or clear the conversation.'
+        )
+      } else if (
+        isImageGenerationModel(config.model) &&
+        [...messages].reverse().find((message) => message.from === 'user')
+          ?.versions[0]?.attachments?.length
+      ) {
+        attachmentError = t(
+          'Attachments require a chat model that supports the selected file type.'
+        )
+      }
+      if (attachmentError) {
+        const error = attachmentError
+        toast.error(error)
+        onMessageUpdate(() =>
+          updateAssistantMessageWithError(
+            nextMessages,
+            error,
+            undefined,
+            t(ERROR_MESSAGES.API_REQUEST_ERROR)
+          )
+        )
+        return
+      }
       onMessageUpdate(() => nextMessages)
       if (config.stream && !isImageGenerationModel(config.model)) {
         sendStreamingChat(nextMessages)
@@ -435,6 +462,7 @@ export function useChatHandler({
       onMessageUpdate,
       sendStreamingChat,
       sendNonStreamingChat,
+      t,
     ]
   )
 

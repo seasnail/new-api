@@ -26,6 +26,7 @@ import type {
   ResponsesOutputItem,
   ResponsesRequest,
   ResponsesResponse,
+  ResponsesInputPart,
 } from '../../types'
 import { completeAssistantMessage } from '../message/message-streaming-utils'
 import { startReasoningTiming } from '../message/message-timing-utils'
@@ -54,28 +55,43 @@ export function buildResponsesPayload(
       continue
     }
     const version = getCurrentVersion(message)
-    if (version.content.trim()) {
+    if (message.from === 'user' && version.attachments?.length) {
+      const content: ResponsesInputPart[] = []
+      if (version.content.trim()) {
+        content.push({ type: 'input_text', text: version.content })
+      }
+      for (const attachment of version.attachments) {
+        if (attachment.text !== undefined) {
+          content.push({
+            type: 'input_text',
+            text: `${attachment.filename}\n${attachment.text}`,
+          })
+        } else if (attachment.mediaType.startsWith('image/')) {
+          content.push({ type: 'input_image', image_url: attachment.url })
+        } else {
+          content.push({
+            type: 'input_file',
+            filename: attachment.filename,
+            file_data: attachment.url,
+          })
+        }
+      }
+      input.push({ role: 'user', content })
+    } else if (version.content.trim()) {
       input.push({ role: message.from, content: version.content })
     }
     if (message.from === 'assistant') {
       for (const image of version.images ?? []) {
-        if (image.source === 'images') {
-          input.push({
-            role: 'user',
-            content: [
-              {
-                type: 'input_image',
-                image_url: `data:image/${image.output_format};base64,${image.result}`,
-              },
-            ],
-          })
-          continue
-        }
+        // With store:false, upstream image-call IDs cannot be looked up on a
+        // later turn. Replay the image bytes for results from either API.
         input.push({
-          type: 'image_generation_call',
-          id: image.id,
-          status: 'completed',
-          result: image.result,
+          role: 'user',
+          content: [
+            {
+              type: 'input_image',
+              image_url: `data:image/${image.output_format};base64,${image.result}`,
+            },
+          ],
         })
       }
     }

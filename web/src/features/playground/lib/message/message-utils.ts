@@ -24,6 +24,7 @@ import type {
   MessageVersion,
   ChatCompletionMessage,
   ContentPart,
+  PlaygroundAttachment,
 } from '../../types'
 
 /**
@@ -76,12 +77,18 @@ export function updateCurrentVersionContent(
  */
 export function createUserMessage(
   content: string,
-  createdAt: number = Date.now()
+  createdAt: number = Date.now(),
+  attachments?: PlaygroundAttachment[]
 ): Message {
   return {
     key: nanoid(),
     from: MESSAGE_ROLES.USER,
-    versions: [createMessageVersion(content)],
+    versions: [
+      {
+        ...createMessageVersion(content),
+        ...(attachments?.length ? { attachments } : {}),
+      },
+    ],
     createdAt,
   }
 }
@@ -154,6 +161,29 @@ export function getTextContent(content: string | ContentPart[]): string {
  */
 export function formatMessageForAPI(message: Message): ChatCompletionMessage {
   const currentVersion = getCurrentVersion(message)
+  const attachments = currentVersion.attachments ?? []
+  if (message.from === 'user' && attachments.length) {
+    const content: ContentPart[] = []
+    if (currentVersion.content) {
+      content.push({ type: 'text', text: currentVersion.content })
+    }
+    for (const attachment of attachments) {
+      if (attachment.text !== undefined) {
+        content.push({
+          type: 'text',
+          text: `${attachment.filename}\n${attachment.text}`,
+        })
+      } else if (attachment.mediaType.startsWith('image/')) {
+        content.push({ type: 'image_url', image_url: { url: attachment.url } })
+      } else {
+        content.push({
+          type: 'file',
+          file: { filename: attachment.filename, file_data: attachment.url },
+        })
+      }
+    }
+    return { role: message.from, content }
+  }
   return {
     role: message.from,
     content: currentVersion.content,

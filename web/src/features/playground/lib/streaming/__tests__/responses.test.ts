@@ -114,32 +114,45 @@ describe('Responses requests and results', () => {
     ).toEqual([{ type: 'image_generation', output_format: 'png' }])
   })
 
-  test('replays completed image calls for follow-up edits and excludes failed and pending replies', () => {
-    const assistant = applyResponsesResponse(
-      createLoadingAssistantMessage(),
-      response
-    )
-    const payload = buildResponsesPayload(
-      [
-        assistant,
-        { ...assistant, status: 'error' },
-        createUserMessage('Make it blue'),
+  test.each(['png', 'jpeg', 'webp'] as const)(
+    'sends %s image bytes for stateless follow-up edits and excludes failed and pending replies',
+    (format) => {
+      const assistant = applyResponsesResponse(
         createLoadingAssistantMessage(),
-      ],
-      DEFAULT_CONFIG,
-      DEFAULT_PARAMETER_ENABLED
-    )
-    expect(payload.input).toEqual([
-      { role: 'assistant', content: 'A friendly robot.' },
-      {
-        type: 'image_generation_call',
-        id: 'img_1',
-        status: 'completed',
-        result: 'aGVsbG8=',
-      },
-      { role: 'user', content: 'Make it blue' },
-    ])
-  })
+        {
+          ...response,
+          output: [
+            response.output[0],
+            { ...response.output[1], output_format: format },
+          ],
+        }
+      )
+      const payload = buildResponsesPayload(
+        [
+          assistant,
+          { ...assistant, status: 'error' },
+          createUserMessage('Make it blue'),
+          createLoadingAssistantMessage(),
+        ],
+        DEFAULT_CONFIG,
+        DEFAULT_PARAMETER_ENABLED
+      )
+      expect(payload.input).toEqual([
+        { role: 'assistant', content: 'A friendly robot.' },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'input_image',
+              image_url: `data:image/${format};base64,aGVsbG8=`,
+            },
+          ],
+        },
+        { role: 'user', content: 'Make it blue' },
+      ])
+      expect(payload.store).toBe(false)
+    }
+  )
 
   test('keeps repeated text deltas and replaces streamed text with the completed snapshot', () => {
     let message = createLoadingAssistantMessage()

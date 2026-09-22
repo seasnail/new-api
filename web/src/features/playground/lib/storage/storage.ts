@@ -380,6 +380,7 @@ export function saveMessages(messages: Message[]): void {
       versions: message.versions.map((version) => ({
         ...version,
         ...(version.images?.length ? { imagesOmitted: true } : {}),
+        ...(version.attachments?.length ? { attachmentsOmitted: true } : {}),
       })),
     }))
     const parsed = messagesSchema.parse(trimmed) as Message[]

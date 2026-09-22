@@ -143,9 +143,35 @@ export function PlaygroundMessageContent({
       <GeneratedImages
         version={message.versions[0] ?? { id: '', content: '' }}
       />
+      <div className='flex max-w-full flex-wrap gap-2'>
+        {message.versions[0]?.attachments?.map((attachment) => (
+          <div
+            key={attachment.id}
+            className='max-w-full rounded-md border p-2 text-sm'
+          >
+            {attachment.mediaType.startsWith('image/') && (
+              <img
+                src={attachment.url}
+                alt={attachment.filename}
+                className='mb-1 max-h-48 max-w-full rounded object-contain'
+              />
+            )}
+            <span className='break-all'>{attachment.filename}</span>
+          </div>
+        ))}
+      </div>
+      {message.versions[0]?.attachmentsOmitted && (
+        <p className='text-muted-foreground text-sm'>
+          {t(
+            'Attachments are no longer available. Remove this message and attach the files again, or clear the conversation.'
+          )}
+        </p>
+      )}
       {!isError &&
         !showMessageContent &&
         (Boolean(message.versions[0]?.images?.length) ||
+          Boolean(message.versions[0]?.attachments?.length) ||
+          message.versions[0]?.attachmentsOmitted ||
           message.versions[0]?.imagesOmitted) && (
           <>
             <MessageMetadata alignment={alignment} message={message} />

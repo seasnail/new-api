@@ -28,7 +28,22 @@ export interface MessageVersion {
   content: string
   images?: GeneratedImage[]
   imagesOmitted?: boolean
+  attachments?: PlaygroundAttachment[]
+  attachmentsOmitted?: boolean
 }
+
+export interface PlaygroundAttachment {
+  id: string
+  filename: string
+  mediaType: string
+  url: string
+  text?: string
+}
+
+export type ResponsesInputPart =
+  | { type: 'input_text'; text: string }
+  | { type: 'input_image'; image_url: string }
+  | { type: 'input_file'; filename: string; file_data: string }
 
 export interface GeneratedImage {
   source?: 'images'
@@ -39,13 +54,7 @@ export interface GeneratedImage {
 
 export type ResponsesInputItem =
   | { role: MessageRole; content: string }
-  | { role: 'user'; content: { type: 'input_image'; image_url: string }[] }
-  | {
-      type: 'image_generation_call'
-      id: string
-      result: string
-      status: 'completed'
-    }
+  | { role: 'user'; content: ResponsesInputPart[] }
 
 export interface ResponsesRequest {
   model: string
@@ -132,7 +141,8 @@ export interface ChatCompletionMessage {
 }
 
 export interface ContentPart {
-  type: 'text' | 'image_url'
+  type: 'text' | 'image_url' | 'file'
+  file?: { filename: string; file_data: string }
   text?: string
   image_url?: {
     url: string

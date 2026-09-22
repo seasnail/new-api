@@ -556,6 +556,8 @@ export const STATIC_I18N_KEYS = [
   'The upstream channel that served the requests',
 
   // Misc
+  'Supported files: PNG, JPEG, WebP, GIF, PDF, TXT, Markdown, CSV and JSON.',
+  'Attachments require a chat model that supports the selected file type.',
   'Cancel',
   'Status',
   'Upgrade Group',

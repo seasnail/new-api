@@ -18,27 +18,36 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 import {
   PromptInput,
+  PromptInputAttachment,
+  PromptInputAttachments,
   PromptInputFooter,
   PromptInputTextarea,
   type PromptInputMessage,
 } from '@/components/ai-elements/prompt-input'
 
-import { getSubmittableInputText } from '../../lib'
+import {
+  ATTACHMENT_ACCEPT,
+  MAX_ATTACHMENT_SIZE,
+  MAX_ATTACHMENTS,
+  prepareAttachments,
+} from '../../lib/input/attachments'
 import { isImageGenerationModel } from '../../lib/streaming/images'
 import type {
   ModelOption,
   ParameterEnabled,
   PlaygroundConfig,
+  PlaygroundAttachment,
 } from '../../types'
-import { PlaygroundInputControls } from './playground-input-controls'
+import { PlaygroundAttachmentInputControls } from './playground-input-controls'
 import { PlaygroundInputTools } from './playground-input-tools'
 
 interface PlaygroundInputProps {
   config: PlaygroundConfig
-  onSubmit: (text: string) => void
+  onSubmit: (text: string, attachments?: PlaygroundAttachment[]) => void
   onStop?: () => void
   disabled?: boolean
   isGenerating?: boolean
@@ -79,11 +88,33 @@ export function PlaygroundInput({
   const [text, setText] = useState('')
 
   const handleSubmit = (message: PromptInputMessage) => {
-    const submittableText = getSubmittableInputText(message, disabled)
-
-    if (!submittableText) return
-    onSubmit(submittableText)
-    setText('')
+    if (
+      disabled ||
+      !models.length ||
+      (!message.text?.trim() && !message.files?.length)
+    ) {
+      throw new Error('Submission unavailable')
+    }
+    try {
+      if (message.files?.length && isImageGenerationModel(config.model)) {
+        throw new Error(
+          'Attachments require a chat model that supports the selected file type.'
+        )
+      }
+      const attachments = prepareAttachments(message.files ?? [])
+      if (attachments.length) onSubmit(message.text ?? '', attachments)
+      else onSubmit(message.text ?? '')
+    } catch (error) {
+      toast.error(
+        t(
+          error instanceof Error
+            ? error.message
+            : 'Unable to read attachment. Please attach it again.'
+        )
+      )
+      throw error
+    }
+    setText((current) => (current === message.text ? '' : current))
   }
 
   return (
@@ -96,10 +127,20 @@ export function PlaygroundInput({
         </p>
       )}
       <PromptInput
+        accept={ATTACHMENT_ACCEPT}
+        multiple
+        maxFiles={MAX_ATTACHMENTS}
+        maxFileSize={MAX_ATTACHMENT_SIZE}
+        onError={(error) => toast.error(error.message)}
         className='relative'
         groupClassName='bg-background/95 dark:bg-background/80 border-border/70 shadow-[0_18px_60px_-32px_rgba(0,0,0,0.65)] ring-1 ring-foreground/5 rounded-xl overflow-hidden transition-all duration-200 focus-within:border-primary/45 focus-within:ring-primary/15 focus-within:shadow-[0_22px_70px_-34px_rgba(0,0,0,0.75)]'
         onSubmit={handleSubmit}
       >
+        <div className='flex flex-wrap gap-2 px-3 pt-2'>
+          <PromptInputAttachments>
+            {(attachment) => <PromptInputAttachment data={attachment} />}
+          </PromptInputAttachments>
+        </div>
         <PromptInputTextarea
           autoComplete='off'
           autoCorrect='off'
@@ -113,7 +154,7 @@ export function PlaygroundInput({
         />
 
         <PromptInputFooter className='border-border/60 bg-muted/20 dark:bg-muted/10 border-t px-3 py-2.5 backdrop-blur'>
-          <PlaygroundInputControls
+          <PlaygroundAttachmentInputControls
             disabled={disabled}
             isGenerating={isGenerating}
             isModelLoading={isModelLoading}
@@ -137,6 +178,11 @@ export function PlaygroundInput({
           />
         </PromptInputFooter>
       </PromptInput>
+      <p className='text-muted-foreground px-3 text-xs'>
+        {t(
+          'Attach images, PDFs or text files. Up to 4 files, 5 MiB each. Attachments are kept only until you reload.'
+        )}
+      </p>
     </div>
   )
 }

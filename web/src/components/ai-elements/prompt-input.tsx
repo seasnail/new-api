@@ -177,20 +177,19 @@ export function PromptInputProvider({
   const openRef = useRef<() => void>(() => {})
 
   const add = useCallback((files: File[] | FileList) => {
-    const incoming = Array.from(files)
+    const incoming = [...files]
     if (incoming.length === 0) return
 
-    setAttachements((prev) =>
-      prev.concat(
-        incoming.map((file) => ({
-          id: nanoid(),
-          type: 'file' as const,
-          url: URL.createObjectURL(file),
-          mediaType: file.type,
-          filename: file.name,
-        }))
-      )
-    )
+    setAttachements((prev) => [
+      ...prev,
+      ...incoming.map((file) => ({
+        id: nanoid(),
+        type: 'file' as const,
+        url: URL.createObjectURL(file),
+        mediaType: file.type,
+        filename: file.name,
+      })),
+    ])
   }, [])
 
   const remove = useCallback((id: string) => {
@@ -439,7 +438,7 @@ export type PromptInputProps = Omit<
   maxFiles?: number
   maxFileSize?: number // bytes
   onError?: (err: {
-    code: 'max_files' | 'max_file_size' | 'accept'
+    code: 'max_files' | 'max_file_size' | 'accept' | 'read'
     message: string
   }) => void
   onSubmit: (
@@ -476,6 +475,7 @@ export const PromptInput = ({
   const inputRef = useRef<HTMLInputElement | null>(null)
   const anchorRef = useRef<HTMLSpanElement>(null)
   const formRef = useRef<HTMLFormElement | null>(null)
+  const submittingRef = useRef(false)
 
   // Find nearest form to scope drag & drop
   useEffect(() => {
@@ -488,6 +488,10 @@ export const PromptInput = ({
   // ----- Local attachments (only used when no provider)
   const [items, setItems] = useState<(FileUIPart & { id: string })[]>([])
   const files = usingProvider ? controller.attachments.files : items
+  const localFilesRef = useRef(items)
+  useEffect(() => {
+    localFilesRef.current = items
+  }, [items])
 
   const openFileDialogLocal = useCallback(() => {
     inputRef.current?.click()
@@ -498,35 +502,36 @@ export const PromptInput = ({
       if (!accept || accept.trim() === '') {
         return true
       }
-      if (accept.includes('image/*')) {
-        return f.type.startsWith('image/')
-      }
-      // NOTE: keep simple; expand as needed
-      return true
+      return accept.split(',').some((entry) => {
+        const type = entry.trim().toLowerCase()
+        if (type.startsWith('.')) return f.name.toLowerCase().endsWith(type)
+        if (type.endsWith('/*')) {
+          return f.type.toLowerCase().startsWith(type.slice(0, -1))
+        }
+        return f.type.toLowerCase() === type
+      })
     },
     [accept]
   )
 
   const addLocal = useCallback(
     (fileList: File[] | FileList) => {
-      const incoming = Array.from(fileList)
+      const incoming = [...fileList]
       const accepted = incoming.filter((f) => matchesAccept(f))
-      if (incoming.length && accepted.length === 0) {
+      if (incoming.length !== accepted.length) {
         onError?.({
           code: 'accept',
           message: t('No files match the accepted types.'),
         })
-        return
       }
       const withinSize = (f: File) =>
         maxFileSize ? f.size <= maxFileSize : true
       const sized = accepted.filter(withinSize)
-      if (accepted.length > 0 && sized.length === 0) {
+      if (accepted.length !== sized.length) {
         onError?.({
           code: 'max_file_size',
           message: t('All files exceed the maximum size.'),
         })
-        return
       }
 
       setItems((prev) => {
@@ -552,7 +557,7 @@ export const PromptInput = ({
             filename: file.name,
           })
         }
-        return prev.concat(next)
+        return [...prev, ...next]
       })
     },
     [matchesAccept, maxFiles, maxFileSize, onError, t]
@@ -671,19 +676,18 @@ export const PromptInput = ({
 
   useEffect(
     () => () => {
-      if (!usingProvider) {
-        for (const f of files) {
-          if (f.url) URL.revokeObjectURL(f.url)
-        }
+      for (const file of localFilesRef.current) {
+        URL.revokeObjectURL(file.url)
       }
     },
-    [usingProvider, files]
+    []
   )
 
   const handleChange: ChangeEventHandler<HTMLInputElement> = (event) => {
     if (event.currentTarget.files) {
       add(event.currentTarget.files)
     }
+    event.currentTarget.value = ''
   }
 
   const convertBlobUrlToDataUrl = async (url: string): Promise<string> => {
@@ -711,6 +715,8 @@ export const PromptInput = ({
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = (event) => {
     event.preventDefault()
+    if (submittingRef.current) return
+    submittingRef.current = true
 
     const form = event.currentTarget
     const text = usingProvider
@@ -737,33 +743,45 @@ export const PromptInput = ({
         }
         return item
       })
-    ).then((convertedFiles: FileUIPart[]) => {
-      try {
-        const result = onSubmit({ text, files: convertedFiles }, event)
+    )
+      .then((convertedFiles: FileUIPart[]) => {
+        try {
+          const result = onSubmit({ text, files: convertedFiles }, event)
 
-        // Handle both sync and async onSubmit
-        if (result instanceof Promise) {
-          result
-            .then(() => {
-              clear()
-              if (usingProvider) {
-                controller.textInput.clear()
-              }
-            })
-            .catch(() => {
-              // Don't clear on error - user may want to retry
-            })
-        } else {
-          // Sync function completed without throwing, clear attachments
-          clear()
-          if (usingProvider) {
-            controller.textInput.clear()
+          // Handle both sync and async onSubmit
+          if (result instanceof Promise) {
+            return result
+              .then(() => {
+                for (const file of files) remove(file.id)
+                if (usingProvider) {
+                  controller.textInput.clear()
+                }
+              })
+              .catch(() => {
+                // Don't clear on error - user may want to retry
+              })
+              .finally(() => {
+                submittingRef.current = false
+              })
+          } else {
+            // Sync function completed without throwing, clear attachments
+            for (const file of files) remove(file.id)
+            if (usingProvider) {
+              controller.textInput.clear()
+            }
           }
+        } catch {
+          // Don't clear on error - user may want to retry
         }
-      } catch (_error) {
-        // Don't clear on error - user may want to retry
-      }
-    })
+        submittingRef.current = false
+      })
+      .catch(() => {
+        submittingRef.current = false
+        onError?.({
+          code: 'read',
+          message: t('Unable to read attachment. Please attach it again.'),
+        })
+      })
   }
 
   // Render with or without local provider
@@ -842,9 +860,7 @@ export const PromptInputTextarea = ({
     ) {
       e.preventDefault()
       const lastAttachment =
-        attachments.files.length > 0
-          ? attachments.files[attachments.files.length - 1]
-          : undefined
+        attachments.files.length > 0 ? attachments.files.at(-1) : undefined
       if (lastAttachment) {
         attachments.remove(lastAttachment.id)
       }
@@ -1138,6 +1154,8 @@ export const PromptInputSpeechButton = ({
       speechRecognition.onresult = (event) => {
         let finalTranscript = ''
 
+        // SpeechRecognitionResultList is array-like, not necessarily iterable.
+        // eslint-disable-next-line unicorn/prefer-spread
         const results = Array.from(event.results)
 
         for (const result of results) {

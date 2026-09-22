@@ -60,6 +60,7 @@ const messageVersionSchema = z.object({
   id: z.string(),
   content: z.string(),
   imagesOmitted: z.boolean().optional(),
+  attachmentsOmitted: z.boolean().optional(),
 })
 
 const sourceSchema = z.object({

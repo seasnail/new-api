@@ -20,7 +20,10 @@ import { SendIcon, SquareIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { PromptInputButton } from '@/components/ai-elements/prompt-input'
+import {
+  PromptInputButton,
+  usePromptInputAttachments,
+} from '@/components/ai-elements/prompt-input'
 import { ModelSelector } from '@/components/model-group-selector'
 
 import { getInputControlState } from '../../lib'
@@ -35,6 +38,7 @@ type PlaygroundInputControlsProps = {
   onModelChange: (value: string) => void
   onStop?: () => void
   text: string
+  hasAttachments?: boolean
   tools: ReactNode
 }
 
@@ -47,6 +51,7 @@ export function PlaygroundInputControls({
   onModelChange,
   onStop,
   text,
+  hasAttachments,
   tools,
 }: PlaygroundInputControlsProps) {
   const { t } = useTranslation()
@@ -58,6 +63,7 @@ export function PlaygroundInputControls({
       isModelLoading,
       models,
       text,
+      hasAttachments,
     })
 
   const renderSelector = () => (
@@ -111,5 +117,17 @@ export function PlaygroundInputControls({
         {renderSubmitButton()}
       </div>
     </div>
+  )
+}
+
+export function PlaygroundAttachmentInputControls(
+  props: PlaygroundInputControlsProps
+) {
+  const attachments = usePromptInputAttachments()
+  return (
+    <PlaygroundInputControls
+      {...props}
+      hasAttachments={attachments.files.length > 0}
+    />
   )
 }
