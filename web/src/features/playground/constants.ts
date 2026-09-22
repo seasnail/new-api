@@ -35,6 +35,7 @@ export const MESSAGE_STATUS = {
 // API endpoints
 export const API_ENDPOINTS = {
   CHAT_COMPLETIONS: '/pg/chat/completions',
+  RESPONSES: '/pg/responses',
   USER_MODELS: '/api/user/models',
 } as const
 
@@ -43,6 +44,9 @@ export const DEFAULT_GROUP = '' as const
 
 // Default configuration
 export const DEFAULT_CONFIG: PlaygroundConfig = {
+  apiMode: 'chat',
+  imageGeneration: false,
+  imageModel: '',
   model: 'gpt-4o',
   group: DEFAULT_GROUP,
   temperature: 0.7,
@@ -72,6 +76,8 @@ export const STORAGE_KEYS = {
 
 // Error messages
 export const ERROR_MESSAGES = {
+  RESPONSE_INCOMPLETE:
+    'The response was incomplete. Try again or increase the output token limit.',
   API_REQUEST_ERROR: 'Request error occurred',
   NETWORK_ERROR: 'Network connection failed or server not responding',
   PARSE_ERROR: 'Error parsing response data',

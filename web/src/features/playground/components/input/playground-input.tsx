@@ -116,6 +116,7 @@ export function PlaygroundInput({
             text={text}
             tools={
               <PlaygroundInputTools
+                models={models}
                 config={config}
                 disabled={disabled}
                 hasMessages={hasMessages}

@@ -26,6 +26,63 @@ export type PlaygroundMessageLayoutMode = 'alternating' | 'left'
 export interface MessageVersion {
   id: string
   content: string
+  images?: GeneratedImage[]
+  imagesOmitted?: boolean
+}
+
+export interface GeneratedImage {
+  id: string
+  result: string
+  output_format: 'png' | 'jpeg' | 'webp'
+}
+
+export type ResponsesInputItem =
+  | { role: MessageRole; content: string }
+  | {
+      type: 'image_generation_call'
+      id: string
+      result: string
+      status: 'completed'
+    }
+
+export interface ResponsesRequest {
+  model: string
+  group?: string
+  input: ResponsesInputItem[]
+  stream: boolean
+  store: false
+  temperature?: number
+  top_p?: number
+  max_output_tokens?: number
+  tools?: { type: 'image_generation'; model?: string; output_format: 'png' }[]
+}
+
+export type PlaygroundRequest = ChatCompletionRequest | ResponsesRequest
+
+export interface ResponsesOutputItem {
+  type: string
+  id?: string
+  status?: string
+  result?: string | null
+  output_format?: string
+  content?: { type: string; text?: string; refusal?: string }[]
+  summary?: { type: string; text?: string }[]
+}
+
+export interface ResponsesResponse {
+  status: string
+  output: ResponsesOutputItem[]
+  error?: { message?: string; code?: string } | null
+  incomplete_details?: { reason?: string } | null
+}
+
+export interface ResponsesEvent {
+  type: string
+  delta?: string
+  item?: ResponsesOutputItem
+  response?: ResponsesResponse
+  message?: string
+  code?: string
 }
 
 export interface Message {
@@ -118,6 +175,9 @@ export interface ChatCompletionResponse {
 
 // Configuration types
 export interface PlaygroundConfig {
+  apiMode?: 'chat' | 'responses'
+  imageGeneration?: boolean
+  imageModel?: string
   model: string
   group: string
   temperature: number

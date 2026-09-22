@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
-import { sendChatCompletion } from '../api'
+import { sendChatCompletion, sendResponse } from '../api'
 import { ERROR_MESSAGES } from '../constants'
 import {
   applyStreamingChunk,
@@ -34,6 +34,12 @@ import {
   isAssistantMessageFinal,
   isAssistantMessagePending,
 } from '../lib'
+import {
+  applyResponsesEvent,
+  applyResponsesResponse,
+  buildResponsesPayload,
+  getResponsesError,
+} from '../lib/streaming/responses'
 import type { Message, PlaygroundConfig, ParameterEnabled } from '../types'
 import { useStreamRequest } from './use-stream-request'
 
@@ -249,16 +255,25 @@ export function useChatHandler({
       abortControllerRef.current = null
       discardPendingStreamUpdates(generation)
       setIsRequesting(true)
-      const payload = buildChatCompletionPayload(
-        messages,
-        config,
-        parameterEnabled
-      )
+      const payload = (
+        config.apiMode === 'responses'
+          ? buildResponsesPayload
+          : buildChatCompletionPayload
+      )(messages, config, parameterEnabled)
       void sendStreamRequest(
         payload,
         (type, chunk) => handleStreamUpdate(generation, type, chunk),
         () => handleStreamComplete(generation),
-        (error, errorCode) => handleStreamError(generation, error, errorCode)
+        (error, errorCode) => handleStreamError(generation, error, errorCode),
+        (event) => {
+          if (generation !== requestGenerationRef.current) return
+          onMessageUpdate((prev) => {
+            if (generation !== requestGenerationRef.current) return prev
+            return updateLastAssistantMessage(prev, (message) =>
+              applyResponsesEvent(message, event)
+            )
+          })
+        }
       )
     },
     [
@@ -269,17 +284,18 @@ export function useChatHandler({
       handleStreamUpdate,
       handleStreamComplete,
       handleStreamError,
+      onMessageUpdate,
     ]
   )
 
   // Send non-streaming chat request
   const sendNonStreamingChat = useCallback(
     async (messages: Message[]) => {
-      const payload = buildChatCompletionPayload(
-        messages,
-        config,
-        parameterEnabled
-      )
+      const payload = (
+        config.apiMode === 'responses'
+          ? buildResponsesPayload
+          : buildChatCompletionPayload
+      )(messages, config, parameterEnabled)
       const generation = requestGenerationRef.current + 1
       const abortController = new AbortController()
 
@@ -291,6 +307,27 @@ export function useChatHandler({
 
       try {
         setIsRequesting(true)
+        if ('input' in payload) {
+          const response = await sendResponse(payload, abortController.signal)
+          if (
+            abortController.signal.aborted ||
+            requestGenerationRef.current !== generation
+          ) {
+            return
+          }
+          const responseError = getResponsesError(response)
+          if (responseError) {
+            handleStreamError(generation, responseError, response.error?.code)
+            return
+          }
+          onMessageUpdate((prev) => {
+            if (requestGenerationRef.current !== generation) return prev
+            return updateLastAssistantMessage(prev, (message) =>
+              applyResponsesResponse(message, response)
+            )
+          })
+          return
+        }
         const response = await sendChatCompletion(
           payload,
           abortController.signal

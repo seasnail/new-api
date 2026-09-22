@@ -374,7 +374,14 @@ export function loadMessages(): Message[] | null {
  */
 export function saveMessages(messages: Message[]): void {
   try {
-    const trimmed = trimMessages(messages)
+    // Image results stay in memory; never put base64 payloads in localStorage.
+    const trimmed = trimMessages(messages).map((message) => ({
+      ...message,
+      versions: message.versions.map((version) => ({
+        ...version,
+        ...(version.images?.length ? { imagesOmitted: true } : {}),
+      })),
+    }))
     const parsed = messagesSchema.parse(trimmed) as Message[]
     writeStoredValue(STORAGE_KEYS.MESSAGES, parsed)
   } catch (error) {

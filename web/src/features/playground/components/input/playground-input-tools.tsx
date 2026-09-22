@@ -43,10 +43,15 @@ import {
   getAttachmentActionNotice,
   getSearchActionNotice,
 } from '../../lib'
-import type { ParameterEnabled, PlaygroundConfig } from '../../types'
+import type {
+  ModelOption,
+  ParameterEnabled,
+  PlaygroundConfig,
+} from '../../types'
 import { PlaygroundParameterPanel } from './playground-parameter-panel'
 
 type PlaygroundInputToolsProps = {
+  models?: ModelOption[]
   config: PlaygroundConfig
   disabled?: boolean
   hasMessages?: boolean
@@ -63,6 +68,7 @@ type PlaygroundInputToolsProps = {
 }
 
 export function PlaygroundInputTools({
+  models,
   config,
   disabled,
   hasMessages = false,
@@ -150,6 +156,7 @@ export function PlaygroundInputTools({
         </Tooltip>
 
         <PlaygroundParameterPanel
+          models={models}
           config={config}
           disabled={disabled}
           onConfigChange={onConfigChange}

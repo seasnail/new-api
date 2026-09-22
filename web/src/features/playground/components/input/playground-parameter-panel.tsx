@@ -51,9 +51,15 @@ import {
   PLAYGROUND_PARAMETER_PANEL_SCROLL_CLASS,
   type PlaygroundParameterKey,
 } from '../../lib/parameters/playground-parameters'
-import type { ParameterEnabled, PlaygroundConfig } from '../../types'
+import type {
+  ModelOption,
+  ParameterEnabled,
+  PlaygroundConfig,
+} from '../../types'
+import { PlaygroundResponsesSettings } from './playground-responses-settings'
 
 type PlaygroundParameterPanelProps = {
+  models?: ModelOption[]
   config: PlaygroundConfig
   disabled?: boolean
   onConfigChange: <K extends keyof PlaygroundConfig>(
@@ -74,6 +80,7 @@ type PlaygroundParameterContentProps = PlaygroundParameterPanelProps & {
 function PlaygroundParameterContent({
   compact = false,
   config,
+  models,
   disabled,
   onConfigChange,
   onParameterEnabledChange,
@@ -101,7 +108,19 @@ function PlaygroundParameterContent({
         compact ? 'px-4 pb-4' : 'p-1'
       )}
     >
-      {PLAYGROUND_PARAMETER_CONTROLS.map((control) => {
+      <PlaygroundResponsesSettings
+        config={config}
+        disabled={disabled}
+        models={models}
+        onConfigChange={onConfigChange}
+      />
+      {PLAYGROUND_PARAMETER_CONTROLS.filter(
+        (control) =>
+          config.apiMode !== 'responses' ||
+          !['frequency_penalty', 'presence_penalty', 'seed'].includes(
+            control.key
+          )
+      ).map((control) => {
         const enabled = parameterEnabled[control.key]
         const value = config[control.key]
         const controlId = `playground-${control.key}`
@@ -199,7 +218,12 @@ export function PlaygroundParameterPanel(props: PlaygroundParameterPanelProps) {
   const { t } = useTranslation()
   const isMobile = useIsMobile()
   const activeCount = PLAYGROUND_PARAMETER_CONTROLS.filter(
-    (control) => props.parameterEnabled[control.key]
+    (control) =>
+      props.parameterEnabled[control.key] &&
+      (props.config.apiMode !== 'responses' ||
+        !['frequency_penalty', 'presence_penalty', 'seed'].includes(
+          control.key
+        ))
   ).length
 
   const trigger = (

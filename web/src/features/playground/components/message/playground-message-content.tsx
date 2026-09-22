@@ -49,6 +49,7 @@ import {
 } from '../../lib'
 import { getMessageContentStyles } from '../../lib/message/message-styles'
 import type { Message } from '../../types'
+import { GeneratedImages } from './generated-images'
 import { MessageError } from './message-error'
 import { MessageMetadata } from './message-metadata'
 
@@ -138,6 +139,19 @@ export function PlaygroundMessageContent({
           {errorActions}
         </>
       )}
+
+      <GeneratedImages
+        version={message.versions[0] ?? { id: '', content: '' }}
+      />
+      {!isError &&
+        !showMessageContent &&
+        (Boolean(message.versions[0]?.images?.length) ||
+          message.versions[0]?.imagesOmitted) && (
+          <>
+            <MessageMetadata alignment={alignment} message={message} />
+            {actions}
+          </>
+        )}
 
       {!isError && showMessageContent && (
         <>

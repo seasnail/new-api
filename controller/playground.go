@@ -52,5 +52,9 @@ func Playground(c *gin.Context) {
 	}
 	_ = middleware.SetupContextForToken(c, tempToken)
 
+	if c.Request.URL.Path == "/pg/responses" {
+		Relay(c, types.RelayFormatOpenAIResponses)
+		return
+	}
 	Relay(c, types.RelayFormatOpenAI)
 }

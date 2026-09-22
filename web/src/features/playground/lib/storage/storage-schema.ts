@@ -25,6 +25,9 @@ export const MAX_LOADED_MESSAGES_CHARS = 120_000
 export const MAX_LOADED_MESSAGE_CHARS = 40_000
 
 export const playgroundConfigSchema = z.object({
+  apiMode: z.enum(['chat', 'responses']).optional(),
+  imageGeneration: z.boolean().optional(),
+  imageModel: z.string().optional(),
   model: z.string().optional(),
   group: z.string().optional(),
   temperature: z.number().optional(),
@@ -56,6 +59,7 @@ const messageStatusSchema = z.enum([
 const messageVersionSchema = z.object({
   id: z.string(),
   content: z.string(),
+  imagesOmitted: z.boolean().optional(),
 })
 
 const sourceSchema = z.object({

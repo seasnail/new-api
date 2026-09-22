@@ -23,7 +23,20 @@ import type {
   ChatCompletionRequest,
   ChatCompletionResponse,
   ModelOption,
+  ResponsesRequest,
+  ResponsesResponse,
 } from './types'
+
+export async function sendResponse(
+  payload: ResponsesRequest,
+  signal?: AbortSignal
+): Promise<ResponsesResponse> {
+  const res = await api.post(API_ENDPOINTS.RESPONSES, payload, {
+    signal,
+    skipErrorHandler: true,
+  } as Record<string, unknown>)
+  return res.data
+}
 
 /**
  * Send chat completion request (non-streaming)
