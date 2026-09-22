@@ -31,6 +31,7 @@ export interface MessageVersion {
 }
 
 export interface GeneratedImage {
+  source?: 'images'
   id: string
   result: string
   output_format: 'png' | 'jpeg' | 'webp'
@@ -38,6 +39,7 @@ export interface GeneratedImage {
 
 export type ResponsesInputItem =
   | { role: MessageRole; content: string }
+  | { role: 'user'; content: { type: 'input_image'; image_url: string }[] }
   | {
       type: 'image_generation_call'
       id: string
@@ -58,6 +60,20 @@ export interface ResponsesRequest {
 }
 
 export type PlaygroundRequest = ChatCompletionRequest | ResponsesRequest
+
+export interface ImageGenerationRequest {
+  model: string
+  group: string
+  prompt: string
+  n: 1
+  output_format: 'png'
+}
+
+export interface ImageGenerationResponse {
+  data?: { b64_json?: string }[]
+  output_format?: string
+  error?: { message?: string }
+}
 
 export interface ResponsesOutputItem {
   type: string

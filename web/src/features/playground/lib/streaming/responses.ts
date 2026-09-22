@@ -31,6 +31,14 @@ import { completeAssistantMessage } from '../message/message-streaming-utils'
 import { startReasoningTiming } from '../message/message-timing-utils'
 import { getCurrentVersion } from '../message/message-utils'
 
+export function isClaudeModel(model: string): boolean {
+  return /(?:^|[/.:])claude(?:[-.]|$)/i.test(model.trim())
+}
+
+export function isResponsesEnabled(config: PlaygroundConfig): boolean {
+  return config.apiMode === 'responses' && !isClaudeModel(config.model)
+}
+
 export function buildResponsesPayload(
   messages: Message[],
   config: PlaygroundConfig,
@@ -51,6 +59,18 @@ export function buildResponsesPayload(
     }
     if (message.from === 'assistant') {
       for (const image of version.images ?? []) {
+        if (image.source === 'images') {
+          input.push({
+            role: 'user',
+            content: [
+              {
+                type: 'input_image',
+                image_url: `data:image/${image.output_format};base64,${image.result}`,
+              },
+            ],
+          })
+          continue
+        }
         input.push({
           type: 'image_generation_call',
           id: image.id,

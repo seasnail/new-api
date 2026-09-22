@@ -16,7 +16,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { GlobeIcon, PaperclipIcon, Trash2Icon } from 'lucide-react'
+import {
+  GlobeIcon,
+  PaperclipIcon,
+  SlidersHorizontalIcon,
+  Trash2Icon,
+} from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -33,6 +38,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverTitle,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -43,6 +55,7 @@ import {
   getAttachmentActionNotice,
   getSearchActionNotice,
 } from '../../lib'
+import { isImageGenerationModel } from '../../lib/streaming/images'
 import type {
   ModelOption,
   ParameterEnabled,
@@ -155,14 +168,42 @@ export function PlaygroundInputTools({
           </TooltipContent>
         </Tooltip>
 
-        <PlaygroundParameterPanel
-          models={models}
-          config={config}
-          disabled={disabled}
-          onConfigChange={onConfigChange}
-          onParameterEnabledChange={onParameterEnabledChange}
-          parameterEnabled={parameterEnabled}
-        />
+        {isImageGenerationModel(config.model) ? (
+          <Popover>
+            <PopoverTrigger
+              render={
+                <PromptInputButton
+                  aria-label={t('Image generation')}
+                  className='text-muted-foreground hover:text-foreground hover:bg-muted/70 font-medium'
+                  variant='ghost'
+                >
+                  <SlidersHorizontalIcon size={16} aria-hidden='true' />
+                </PromptInputButton>
+              }
+            />
+            <PopoverContent
+              align='start'
+              side='top'
+              className='w-80 max-w-[calc(100vw-2rem)] p-4'
+            >
+              <PopoverTitle>{t('Image generation')}</PopoverTitle>
+              <PopoverDescription className='text-sm leading-relaxed'>
+                {t(
+                  'To use chat history and supported parameters, select a compatible OpenAI chat model instead. Open Parameters, enable Use Responses API and Image generation, then choose an Image model supported by your channel.'
+                )}
+              </PopoverDescription>
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <PlaygroundParameterPanel
+            models={models}
+            config={config}
+            disabled={disabled}
+            onConfigChange={onConfigChange}
+            onParameterEnabledChange={onParameterEnabledChange}
+            parameterEnabled={parameterEnabled}
+          />
+        )}
 
         <Tooltip>
           <TooltipTrigger

@@ -51,6 +51,7 @@ import {
   PLAYGROUND_PARAMETER_PANEL_SCROLL_CLASS,
   type PlaygroundParameterKey,
 } from '../../lib/parameters/playground-parameters'
+import { isResponsesEnabled } from '../../lib/streaming/responses'
 import type {
   ModelOption,
   ParameterEnabled,
@@ -116,7 +117,7 @@ function PlaygroundParameterContent({
       />
       {PLAYGROUND_PARAMETER_CONTROLS.filter(
         (control) =>
-          config.apiMode !== 'responses' ||
+          !isResponsesEnabled(config) ||
           !['frequency_penalty', 'presence_penalty', 'seed'].includes(
             control.key
           )
@@ -217,26 +218,15 @@ function PlaygroundParameterContent({
 export function PlaygroundParameterPanel(props: PlaygroundParameterPanelProps) {
   const { t } = useTranslation()
   const isMobile = useIsMobile()
-  const activeCount = PLAYGROUND_PARAMETER_CONTROLS.filter(
-    (control) =>
-      props.parameterEnabled[control.key] &&
-      (props.config.apiMode !== 'responses' ||
-        !['frequency_penalty', 'presence_penalty', 'seed'].includes(
-          control.key
-        ))
-  ).length
 
   const trigger = (
     <PromptInputButton
       aria-label={t('Parameters')}
-      className='text-muted-foreground hover:text-foreground hover:bg-muted/70 relative font-medium'
+      className='text-muted-foreground hover:text-foreground hover:bg-muted/70 font-medium'
       disabled={props.disabled}
       variant='ghost'
     >
       <SlidersHorizontalIcon size={16} />
-      <span className='bg-primary text-primary-foreground absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-1 text-[9px] leading-none font-semibold'>
-        {activeCount}
-      </span>
     </PromptInputButton>
   )
 

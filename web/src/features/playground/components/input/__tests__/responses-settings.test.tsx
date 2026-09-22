@@ -37,6 +37,45 @@ function Settings() {
 }
 
 describe('Responses settings', () => {
+  test.each([
+    'claude-sonnet-4-6',
+    'anthropic/claude-opus-4-6',
+    'us.anthropic.claude-sonnet-4-6-v1:0',
+  ])(
+    'hides Responses and image-tool controls for %s and restores them for OpenAI',
+    (model) => {
+      const config = {
+        ...DEFAULT_CONFIG,
+        model,
+        apiMode: 'responses' as const,
+        imageGeneration: true,
+      }
+      const { rerender } = render(
+        <PlaygroundResponsesSettings
+          config={config}
+          onConfigChange={() => undefined}
+        />
+      )
+      expect(
+        screen.queryByRole('switch', { name: 'Use Responses API' })
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('switch', { name: 'Image generation' })
+      ).not.toBeInTheDocument()
+      rerender(
+        <PlaygroundResponsesSettings
+          config={{ ...config, model: 'gpt-5.6-luna' }}
+          onConfigChange={() => undefined}
+        />
+      )
+      expect(
+        screen.getByRole('switch', { name: 'Use Responses API' })
+      ).toHaveAttribute('aria-checked', 'true')
+      expect(
+        screen.getByRole('switch', { name: 'Image generation' })
+      ).toBeVisible()
+    }
+  )
   test('allows switching to Responses with the keyboard', async () => {
     const user = userEvent.setup()
     render(<Settings />)

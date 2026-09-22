@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 
+import { isClaudeModel } from '../../lib/streaming/responses'
 import type { ModelOption, PlaygroundConfig } from '../../types'
 
 type Props = {
@@ -37,6 +38,7 @@ type Props = {
 export function PlaygroundResponsesSettings(props: Props) {
   const { t } = useTranslation()
   const id = useId()
+  if (isClaudeModel(props.config.model)) return null
   const responses = props.config.apiMode === 'responses'
   return (
     <fieldset

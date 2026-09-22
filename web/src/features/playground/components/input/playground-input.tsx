@@ -27,6 +27,7 @@ import {
 } from '@/components/ai-elements/prompt-input'
 
 import { getSubmittableInputText } from '../../lib'
+import { isImageGenerationModel } from '../../lib/streaming/images'
 import type {
   ModelOption,
   ParameterEnabled,
@@ -87,6 +88,13 @@ export function PlaygroundInput({
 
   return (
     <div className='grid shrink-0 gap-4 px-1 md:pb-4'>
+      {isImageGenerationModel(config.model) && (
+        <p className='text-muted-foreground px-3 text-xs'>
+          {t(
+            'Image generation uses your latest prompt only. Chat history and chat parameters are not sent.'
+          )}
+        </p>
+      )}
       <PromptInput
         className='relative'
         groupClassName='bg-background/95 dark:bg-background/80 border-border/70 shadow-[0_18px_60px_-32px_rgba(0,0,0,0.65)] ring-1 ring-foreground/5 rounded-xl overflow-hidden transition-all duration-200 focus-within:border-primary/45 focus-within:ring-primary/15 focus-within:shadow-[0_22px_70px_-34px_rgba(0,0,0,0.75)]'

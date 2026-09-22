@@ -106,8 +106,8 @@ func Distribute() func(c *gin.Context) {
 				}
 				var selectGroup string
 				usingGroup := common.GetContextKeyString(c, constant.ContextKeyUsingGroup)
-				// Both playground protocols use the same group authorization.
-				if strings.HasPrefix(c.Request.URL.Path, "/pg/chat/completions") || c.Request.URL.Path == "/pg/responses" {
+				// Playground protocols use the same group authorization.
+				if strings.HasPrefix(c.Request.URL.Path, "/pg/chat/completions") || c.Request.URL.Path == "/pg/responses" || c.Request.URL.Path == "/pg/images/generations" {
 					playgroundRequest := &dto.PlayGroundRequest{}
 					err = common.UnmarshalBodyReusable(c, playgroundRequest)
 					if err != nil {
@@ -556,7 +556,7 @@ func getModelRequest(c *gin.Context) (*ModelRequest, bool, error) {
 		}
 		c.Set("relay_mode", relayMode)
 	}
-	if strings.HasPrefix(c.Request.URL.Path, "/pg/chat/completions") || c.Request.URL.Path == "/pg/responses" {
+	if strings.HasPrefix(c.Request.URL.Path, "/pg/chat/completions") || c.Request.URL.Path == "/pg/responses" || c.Request.URL.Path == "/pg/images/generations" {
 		// playground chat completions
 		req, err := getModelFromRequest(c)
 		if err != nil {

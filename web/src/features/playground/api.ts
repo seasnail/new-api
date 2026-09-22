@@ -20,12 +20,25 @@ import { api } from '@/lib/api'
 
 import { API_ENDPOINTS } from './constants'
 import type {
+  ImageGenerationRequest,
+  ImageGenerationResponse,
   ChatCompletionRequest,
   ChatCompletionResponse,
   ModelOption,
   ResponsesRequest,
   ResponsesResponse,
 } from './types'
+
+export async function generateImage(
+  payload: ImageGenerationRequest,
+  signal?: AbortSignal
+): Promise<ImageGenerationResponse> {
+  const res = await api.post(API_ENDPOINTS.IMAGES, payload, {
+    signal,
+    skipErrorHandler: true,
+  } as Record<string, unknown>)
+  return res.data
+}
 
 export async function sendResponse(
   payload: ResponsesRequest,

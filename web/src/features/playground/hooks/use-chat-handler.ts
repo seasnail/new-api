@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
-import { sendChatCompletion, sendResponse } from '../api'
+import { generateImage, sendChatCompletion, sendResponse } from '../api'
 import { ERROR_MESSAGES } from '../constants'
 import {
   applyStreamingChunk,
@@ -35,12 +35,24 @@ import {
   isAssistantMessagePending,
 } from '../lib'
 import {
+  applyImageGenerationResponse,
+  buildImageGenerationPayload,
+  isImageGenerationModel,
+} from '../lib/streaming/images'
+import {
   applyResponsesEvent,
   applyResponsesResponse,
   buildResponsesPayload,
   getResponsesError,
+  isResponsesEnabled,
 } from '../lib/streaming/responses'
-import type { Message, PlaygroundConfig, ParameterEnabled } from '../types'
+import type {
+  ImageGenerationRequest,
+  PlaygroundRequest,
+  Message,
+  PlaygroundConfig,
+  ParameterEnabled,
+} from '../types'
 import { useStreamRequest } from './use-stream-request'
 
 interface UseChatHandlerOptions {
@@ -256,7 +268,7 @@ export function useChatHandler({
       discardPendingStreamUpdates(generation)
       setIsRequesting(true)
       const payload = (
-        config.apiMode === 'responses'
+        isResponsesEnabled(config)
           ? buildResponsesPayload
           : buildChatCompletionPayload
       )(messages, config, parameterEnabled)
@@ -291,11 +303,14 @@ export function useChatHandler({
   // Send non-streaming chat request
   const sendNonStreamingChat = useCallback(
     async (messages: Message[]) => {
-      const payload = (
-        config.apiMode === 'responses'
-          ? buildResponsesPayload
-          : buildChatCompletionPayload
-      )(messages, config, parameterEnabled)
+      let payload: ImageGenerationRequest | PlaygroundRequest
+      if (isImageGenerationModel(config.model)) {
+        payload = buildImageGenerationPayload(messages, config)
+      } else if (isResponsesEnabled(config)) {
+        payload = buildResponsesPayload(messages, config, parameterEnabled)
+      } else {
+        payload = buildChatCompletionPayload(messages, config, parameterEnabled)
+      }
       const generation = requestGenerationRef.current + 1
       const abortController = new AbortController()
 
@@ -307,6 +322,24 @@ export function useChatHandler({
 
       try {
         setIsRequesting(true)
+        if ('prompt' in payload) {
+          const response = await generateImage(payload, abortController.signal)
+          if (
+            abortController.signal.aborted ||
+            requestGenerationRef.current !== generation
+          ) {
+            return
+          }
+          // Parse before the React state updater so invalid output follows the normal error path.
+          const assistant = messages.at(-1)
+          if (!assistant) return
+          const completed = applyImageGenerationResponse(assistant, response)
+          onMessageUpdate((prev) => {
+            if (requestGenerationRef.current !== generation) return prev
+            return updateLastAssistantMessage(prev, () => completed)
+          })
+          return
+        }
         if ('input' in payload) {
           const response = await sendResponse(payload, abortController.signal)
           if (
@@ -390,7 +423,7 @@ export function useChatHandler({
         model: config.model,
       }))
       onMessageUpdate(() => nextMessages)
-      if (config.stream) {
+      if (config.stream && !isImageGenerationModel(config.model)) {
         sendStreamingChat(nextMessages)
       } else {
         sendNonStreamingChat(nextMessages)

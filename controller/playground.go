@@ -52,6 +52,10 @@ func Playground(c *gin.Context) {
 	}
 	_ = middleware.SetupContextForToken(c, tempToken)
 
+	if c.Request.URL.Path == "/pg/images/generations" {
+		Relay(c, types.RelayFormatOpenAIImage)
+		return
+	}
 	if c.Request.URL.Path == "/pg/responses" {
 		Relay(c, types.RelayFormatOpenAIResponses)
 		return

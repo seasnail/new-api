@@ -12,13 +12,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPlaygroundResponsesRequiresDashboardAuthentication(t *testing.T) {
+func TestPlaygroundMediaRequiresDashboardAuthentication(t *testing.T) {
 	require.NoError(t, i18n.Init())
 	router := gin.New()
 	SetRelayRouter(router)
-	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest(http.MethodPost, "/pg/responses", strings.NewReader(`{"model":"gpt-test","input":"hello"}`))
-	request.Header.Set("Content-Type", "application/json")
-	router.ServeHTTP(recorder, request)
-	assert.Equal(t, http.StatusUnauthorized, recorder.Code)
+	for _, path := range []string{"/pg/responses", "/pg/images/generations"} {
+		t.Run(path, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			request := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"model":"gpt-test","input":"hello"}`))
+			request.Header.Set("Content-Type", "application/json")
+			router.ServeHTTP(recorder, request)
+			assert.Equal(t, http.StatusUnauthorized, recorder.Code)
+		})
+	}
 }
