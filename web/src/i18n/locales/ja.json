@@ -4335,6 +4335,7 @@
     "Search rules...": "ルールを検索…",
     "Search tags...": "タグを検索...",
     "Search the public web at inference time": "推論時に公開ウェブを検索",
+    "Search the web using a model and channel that support Responses web search.": "Responses のウェブ検索に対応したモデルとチャネルでウェブを検索します。",
     "Search vendors...": "ベンダーを検索...",
     "Search...": "検索...",
     "second": "秒",

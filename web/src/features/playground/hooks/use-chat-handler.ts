@@ -423,14 +423,16 @@ export function useChatHandler({
         model: config.model,
       }))
       let attachmentError: string | undefined
-      if (messages.some((message) => message.versions[0]?.attachmentsOmitted)) {
+      const latestUserVersion = [...messages]
+        .reverse()
+        .find((message) => message.from === 'user')?.versions[0]
+      if (latestUserVersion?.attachmentsOmitted) {
         attachmentError = t(
           'Attachments are no longer available. Remove this message and attach the files again, or clear the conversation.'
         )
       } else if (
         isImageGenerationModel(config.model) &&
-        [...messages].reverse().find((message) => message.from === 'user')
-          ?.versions[0]?.attachments?.length
+        latestUserVersion?.attachments?.length
       ) {
         attachmentError = t(
           'Attachments require a chat model that supports the selected file type.'

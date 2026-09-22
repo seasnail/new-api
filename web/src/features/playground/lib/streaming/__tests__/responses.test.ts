@@ -62,6 +62,74 @@ const response: ResponsesResponse = {
 afterEach(() => localStorage.clear())
 
 describe('Responses requests and results', () => {
+  test('adds web search alongside image generation and omits it when switched off', () => {
+    const config = { ...DEFAULT_CONFIG, webSearch: true, imageGeneration: true }
+    expect(
+      buildResponsesPayload([], config, DEFAULT_PARAMETER_ENABLED).tools
+    ).toEqual([
+      { type: 'image_generation', output_format: 'png' },
+      { type: 'web_search' },
+    ])
+    expect(
+      buildResponsesPayload(
+        [],
+        { ...config, webSearch: false },
+        DEFAULT_PARAMETER_ENABLED
+      ).tools
+    ).toEqual([{ type: 'image_generation', output_format: 'png' }])
+  })
+
+  test('persists the web search preference', () => {
+    saveConfig({ ...DEFAULT_CONFIG, webSearch: true })
+    expect(loadConfig().webSearch).toBe(true)
+    saveConfig({ ...DEFAULT_CONFIG, webSearch: false })
+    expect(loadConfig().webSearch).toBe(false)
+  })
+
+  test('preserves unique safe citation links in streaming and non-streaming responses', () => {
+    const cited: ResponsesResponse = {
+      status: 'completed',
+      output: [
+        {
+          type: 'message',
+          content: [
+            {
+              type: 'output_text',
+              text: 'An answer with sources.',
+              annotations: [
+                {
+                  type: 'url_citation',
+                  url: 'https://example.com/article',
+                  title: 'Article',
+                },
+                {
+                  type: 'url_citation',
+                  url: 'https://example.com/article',
+                  title: 'Article',
+                },
+                {
+                  type: 'url_citation',
+                  url: 'javascript:alert(1)',
+                  title: 'Unsafe',
+                },
+                { type: 'url_citation', url: 'invalid', title: 'Invalid' },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const message = createLoadingAssistantMessage()
+    const expected = [{ href: 'https://example.com/article', title: 'Article' }]
+    expect(applyResponsesResponse(message, cited).sources).toEqual(expected)
+    expect(
+      applyResponsesEvent(message, {
+        type: 'response.completed',
+        response: cited,
+      }).sources
+    ).toEqual(expected)
+  })
+
   test('sends the image tool and supported parameters while preserving explicit zero values', () => {
     const payload = buildResponsesPayload(
       [createUserMessage('Draw a robot'), createLoadingAssistantMessage()],

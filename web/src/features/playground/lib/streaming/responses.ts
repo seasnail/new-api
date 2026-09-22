@@ -109,8 +109,14 @@ export function buildResponsesPayload(
   if (config.imageGeneration) {
     payload.tools = [{ type: 'image_generation', output_format: 'png' }]
     if (config.imageModel?.trim()) {
-      payload.tools[0].model = config.imageModel.trim()
+      const imageTool = payload.tools[0]
+      if (imageTool.type === 'image_generation') {
+        imageTool.model = config.imageModel.trim()
+      }
     }
+  }
+  if (config.webSearch) {
+    payload.tools = [...(payload.tools ?? []), { type: 'web_search' }]
   }
   return payload
 }
@@ -165,6 +171,7 @@ export function applyResponsesResponse(
   const images: GeneratedImage[] = []
   const text: string[] = []
   const reasoning: string[] = []
+  const sources: NonNullable<Message['sources']> = []
   for (const item of response.output ?? []) {
     const image = readGeneratedImage(item)
     if (image) images.push(image)
@@ -172,6 +179,21 @@ export function applyResponsesResponse(
       for (const part of item.content ?? []) {
         if (part.type === 'output_text' && part.text) text.push(part.text)
         if (part.type === 'refusal' && part.refusal) text.push(part.refusal)
+        for (const annotation of part.annotations ?? []) {
+          if (annotation.type !== 'url_citation' || !annotation.url) continue
+          try {
+            const url = new URL(annotation.url)
+            if (!['https:', 'http:'].includes(url.protocol)) continue
+            if (!sources.some((source) => source.href === url.href)) {
+              sources.push({
+                href: url.href,
+                title: annotation.title || url.href,
+              })
+            }
+          } catch {
+            // Ignore malformed source URLs returned by the provider.
+          }
+        }
       }
     }
     if (item.type === 'reasoning') {
@@ -182,6 +204,7 @@ export function applyResponsesResponse(
   }
   return completeAssistantMessage({
     ...message,
+    sources,
     versions: [
       {
         ...getCurrentVersion(message),

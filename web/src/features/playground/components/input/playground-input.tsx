@@ -178,11 +178,6 @@ export function PlaygroundInput({
           />
         </PromptInputFooter>
       </PromptInput>
-      <p className='text-muted-foreground px-3 text-xs'>
-        {t(
-          'Attach images, PDFs or text files. Up to 4 files, 5 MiB each. Attachments are kept only until you reload.'
-        )}
-      </p>
     </div>
   )
 }

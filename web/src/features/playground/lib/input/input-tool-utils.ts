@@ -16,12 +16,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-type InputToolNotice = {
-  title: string
-}
+import type { PlaygroundConfig } from '../../types'
+import { isImageGenerationModel } from '../streaming/images'
+import { isResponsesEnabled } from '../streaming/responses'
 
-export function getSearchActionNotice(): InputToolNotice {
-  return {
-    title: 'Search feature in development',
-  }
+export function isSearchEnabled(config: PlaygroundConfig): boolean {
+  return (
+    Boolean(config.webSearch) &&
+    isResponsesEnabled(config) &&
+    !isImageGenerationModel(config.model)
+  )
 }

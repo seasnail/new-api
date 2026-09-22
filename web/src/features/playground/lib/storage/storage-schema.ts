@@ -25,6 +25,7 @@ export const MAX_LOADED_MESSAGES_CHARS = 120_000
 export const MAX_LOADED_MESSAGE_CHARS = 40_000
 
 export const playgroundConfigSchema = z.object({
+  webSearch: z.boolean().optional(),
   apiMode: z.enum(['chat', 'responses']).optional(),
   imageGeneration: z.boolean().optional(),
   imageModel: z.string().optional(),

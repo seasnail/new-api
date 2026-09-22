@@ -45,6 +45,7 @@ export const DEFAULT_GROUP = '' as const
 
 // Default configuration
 export const DEFAULT_CONFIG: PlaygroundConfig = {
+  webSearch: false,
   apiMode: 'chat',
   imageGeneration: false,
   imageModel: '',

@@ -72,6 +72,55 @@ function fileInput() {
 }
 
 describe('Playground file input', () => {
+  it('toggles search with empty input and selects Responses for search requests', async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(<PlaygroundInput {...props} />)
+    await user.click(
+      screen.getByRole('button', { name: 'Search', pressed: false })
+    )
+    expect(props.onConfigChange).toHaveBeenCalledWith('apiMode', 'responses')
+    expect(props.onConfigChange).toHaveBeenCalledWith('webSearch', true)
+    rerender(
+      <PlaygroundInput
+        {...props}
+        config={{ ...props.config, apiMode: 'responses', webSearch: true }}
+      />
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'Search', pressed: true })
+    )
+    expect(props.onConfigChange).toHaveBeenCalledWith('webSearch', false)
+    rerender(
+      <PlaygroundInput
+        {...props}
+        config={{ ...props.config, apiMode: 'chat', webSearch: true }}
+      />
+    )
+    expect(
+      screen.getByRole('button', { name: 'Search', pressed: false })
+    ).toBeEnabled()
+  })
+
+  it.each(['claude-sonnet-4-6', 'gpt-image-1'])(
+    'disables search for %s',
+    (model) => {
+      render(
+        <PlaygroundInput
+          {...props}
+          config={{
+            ...props.config,
+            model,
+            webSearch: true,
+            apiMode: 'responses',
+          }}
+        />
+      )
+      expect(
+        screen.getByRole('button', { name: 'Search', pressed: false })
+      ).toBeDisabled()
+    }
+  )
+
   it('opens the file picker directly from the attachment button with empty input', async () => {
     const user = userEvent.setup()
     render(<PlaygroundInput {...props} />)

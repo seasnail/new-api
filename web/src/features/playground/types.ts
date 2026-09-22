@@ -65,7 +65,10 @@ export interface ResponsesRequest {
   temperature?: number
   top_p?: number
   max_output_tokens?: number
-  tools?: { type: 'image_generation'; model?: string; output_format: 'png' }[]
+  tools?: (
+    | { type: 'image_generation'; model?: string; output_format: 'png' }
+    | { type: 'web_search' }
+  )[]
 }
 
 export type PlaygroundRequest = ChatCompletionRequest | ResponsesRequest
@@ -90,7 +93,12 @@ export interface ResponsesOutputItem {
   status?: string
   result?: string | null
   output_format?: string
-  content?: { type: string; text?: string; refusal?: string }[]
+  content?: {
+    type: string
+    text?: string
+    refusal?: string
+    annotations?: { type: string; url?: string; title?: string }[]
+  }[]
   summary?: { type: string; text?: string }[]
 }
 
@@ -201,6 +209,7 @@ export interface ChatCompletionResponse {
 
 // Configuration types
 export interface PlaygroundConfig {
+  webSearch?: boolean
   apiMode?: 'chat' | 'responses'
   imageGeneration?: boolean
   imageModel?: string

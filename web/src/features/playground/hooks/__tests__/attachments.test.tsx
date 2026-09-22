@@ -16,7 +16,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -39,6 +39,41 @@ function useConversation(config: PlaygroundConfig) {
 }
 
 describe('Attachment request guards', () => {
+  it('sends a new text-only prompt when older messages have expired attachments', async () => {
+    const post = vi.spyOn(api, 'post').mockResolvedValue({
+      data: {
+        choices: [
+          {
+            message: { role: 'assistant', content: 'Hello' },
+            finish_reason: 'stop',
+          },
+        ],
+      },
+    })
+    const { result } = renderHook(() =>
+      useConversation({ ...DEFAULT_CONFIG, model: 'gpt-4o', stream: false })
+    )
+    const history = appendUserMessagePair([], 'An earlier attachment')
+    history[0].versions[0].attachmentsOmitted = true
+    history[1].status = 'complete'
+    history[1].versions[0].content = 'Earlier answer'
+    await act(async () => {
+      result.current.sendChat(
+        appendUserMessagePair(history, 'Hello without attachments')
+      )
+    })
+    await waitFor(() => expect(post).toHaveBeenCalledOnce())
+    expect(post.mock.calls[0][1]).toMatchObject({
+      messages: expect.arrayContaining([
+        { role: 'user', content: 'Hello without attachments' },
+      ]),
+    })
+    await waitFor(() =>
+      expect(result.current.messages.at(-1)?.status).toBe('complete')
+    )
+    expect(result.current.messages[0].versions[0].attachmentsOmitted).toBe(true)
+  })
+
   it.each([true, false])(
     'blocks missing attachments after reload with streaming=%s',
     async (stream) => {

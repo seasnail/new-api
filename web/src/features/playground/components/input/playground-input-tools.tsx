@@ -45,8 +45,9 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 
-import { getSearchActionNotice } from '../../lib'
+import { isSearchEnabled } from '../../lib'
 import { isImageGenerationModel } from '../../lib/streaming/images'
+import { isClaudeModel } from '../../lib/streaming/responses'
 import type {
   ModelOption,
   ParameterEnabled,
@@ -84,10 +85,11 @@ export function PlaygroundInputTools({
   const { t } = useTranslation()
   const attachments = usePromptInputAttachments()
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
+  const searchEnabled = isSearchEnabled(config)
 
   const handleSearchAction = () => {
-    const notice = getSearchActionNotice()
-    toast.info(t(notice.title))
+    if (!searchEnabled) onConfigChange('apiMode', 'responses')
+    onConfigChange('webSearch', !searchEnabled)
   }
 
   const handleClearMessages = () => {
@@ -113,8 +115,12 @@ export function PlaygroundInputTools({
               </PromptInputButton>
             }
           />
-          <TooltipContent>
-            <p>{t('Attach')}</p>
+          <TooltipContent className='max-w-xs'>
+            <p>
+              {t(
+                'Attach images, PDFs or text files. Up to 4 files, 5 MiB each. Attachments are kept only until you reload.'
+              )}
+            </p>
           </TooltipContent>
         </Tooltip>
 
@@ -123,8 +129,13 @@ export function PlaygroundInputTools({
             render={
               <PromptInputButton
                 aria-label={t('Search')}
-                className='text-muted-foreground hover:text-foreground hover:bg-muted/70 font-medium'
-                disabled={disabled}
+                aria-pressed={searchEnabled}
+                className='text-muted-foreground hover:text-foreground hover:bg-muted/70 aria-pressed:bg-primary/10 aria-pressed:text-primary font-medium'
+                disabled={
+                  disabled ||
+                  isClaudeModel(config.model) ||
+                  isImageGenerationModel(config.model)
+                }
                 onClick={handleSearchAction}
                 variant='ghost'
               >
@@ -133,7 +144,11 @@ export function PlaygroundInputTools({
             }
           />
           <TooltipContent>
-            <p>{t('Search')}</p>
+            <p>
+              {t(
+                'Search the web using a model and channel that support Responses web search.'
+              )}
+            </p>
           </TooltipContent>
         </Tooltip>
 
