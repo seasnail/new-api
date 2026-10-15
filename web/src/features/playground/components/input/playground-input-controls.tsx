@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 import { SendIcon, SquareIcon } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import {
@@ -55,6 +55,10 @@ export function PlaygroundInputControls({
   tools,
 }: PlaygroundInputControlsProps) {
   const { t } = useTranslation()
+  const sortedModels = useMemo(
+    () => [...models].sort((a, b) => a.label.localeCompare(b.label)),
+    [models]
+  )
   const { canSubmit, isSelectorDisabled, shouldShowStop } =
     getInputControlState({
       disabled,
@@ -69,7 +73,7 @@ export function PlaygroundInputControls({
   const renderSelector = () => (
     <ModelSelector
       selectedModel={modelValue}
-      models={models}
+      models={sortedModels}
       onModelChange={onModelChange}
       disabled={isSelectorDisabled}
     />

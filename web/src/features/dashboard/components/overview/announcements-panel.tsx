@@ -72,7 +72,8 @@ export function AnnouncementsPanel() {
       empty={!list.length}
       emptyMessage={t('No announcements at this time')}
       height='h-72'
-      contentClassName='p-0'
+      className='flex h-full flex-col'
+      contentClassName='flex-1 p-0'
     >
       <ScrollArea className='h-72'>
         <div>

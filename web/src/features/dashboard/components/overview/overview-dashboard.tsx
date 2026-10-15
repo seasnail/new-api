@@ -751,35 +751,37 @@ export function DashboardOverviewPanels() {
     uptimeKuma: showUptimePanel,
   } = useDashboardContentVisibility()
   const isAdmin = Boolean(userRole && userRole >= ROLE.ADMIN)
-  const showLeftContentPanels =
-    isAdmin || showApiInfoPanel || showAnnouncementsPanel || showFAQPanel
-  const showContentPanels = showLeftContentPanels || showUptimePanel
+  const showInfoPanels =
+    showApiInfoPanel || showAnnouncementsPanel || showFAQPanel
+  const showContentPanels = isAdmin || showInfoPanels || showUptimePanel
 
   return (
     <>
       <SummaryCards />
       {showContentPanels && (
-        <CardStaggerContainer
-          className={cn(
-            'grid grid-cols-1 gap-4',
-            showLeftContentPanels &&
-              showUptimePanel &&
-              'xl:grid-cols-[minmax(0,1fr)_22rem]'
-          )}
-        >
-          {showLeftContentPanels && (
+        <CardStaggerContainer className='grid grid-cols-1 gap-4'>
+          {(isAdmin || showUptimePanel) && (
             <div
               className={cn(
                 'grid min-w-0 grid-cols-1 gap-4',
-                (showApiInfoPanel || showAnnouncementsPanel || showFAQPanel) &&
-                  'lg:grid-cols-2'
+                isAdmin && showUptimePanel &&
+                  'lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]'
               )}
             >
               {isAdmin && (
-                <CardStaggerItem className='lg:col-span-2'>
+                <CardStaggerItem className='min-w-0'>
                   <PerformanceHealthPanel />
                 </CardStaggerItem>
               )}
+              {showUptimePanel && (
+                <CardStaggerItem className='min-w-0'>
+                  <UptimePanel />
+                </CardStaggerItem>
+              )}
+            </div>
+          )}
+          {showInfoPanels && (
+            <div className='grid min-w-0 grid-cols-1 gap-4 lg:auto-cols-fr lg:grid-flow-col'>
               {showApiInfoPanel && (
                 <CardStaggerItem>
                   <ApiInfoPanel />
@@ -796,11 +798,6 @@ export function DashboardOverviewPanels() {
                 </CardStaggerItem>
               )}
             </div>
-          )}
-          {showUptimePanel && (
-            <CardStaggerItem>
-              <UptimePanel />
-            </CardStaggerItem>
           )}
         </CardStaggerContainer>
       )}
