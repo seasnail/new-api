@@ -2,6 +2,7 @@
 
 ```
 ssh -i c:\git\fairy-land-3.pem ec2-user@3.24.136.62
+ssh -i c:\git\qian2\tokyo.pem ec2-user@18.183.162.116
 ```
 
 # Create/Update config
