@@ -113,7 +113,7 @@ type ModelRow = {
   model: string
 }
 
-type TestStatus = 'idle' | 'testing' | 'success' | 'error'
+type TestStatus = 'idle' | 'testing' | 'success' | 'error' | 'skipped'
 
 type TestResult = {
   status: TestStatus
@@ -564,10 +564,16 @@ function ChannelTestDialogContent({
             stream: effectiveStreamTest || undefined,
             silent,
           },
-          (success, responseTime, error, errorCode) => {
+          (success, responseTime, error, errorCode, skipped) => {
             const completedAt = Date.now()
+            let status: TestStatus = 'error'
+            if (skipped) {
+              status = 'skipped'
+            } else if (success) {
+              status = 'success'
+            }
             finalResult = {
-              status: success ? 'success' : 'error',
+              status,
               responseTime,
               completedAt,
               error,
@@ -635,6 +641,7 @@ function ChannelTestDialogContent({
       const results: TestResult[] = []
       let completedCount = 0
       let successCount = 0
+      let skippedCount = 0
       let failedCount = 0
 
       try {
@@ -649,8 +656,10 @@ function ChannelTestDialogContent({
           completedCount += 1
           if (result.status === 'success') {
             successCount += 1
+          } else if (result.status === 'skipped') {
+            skippedCount += 1
           }
-          failedCount = completedCount - successCount
+          failedCount = completedCount - successCount - skippedCount
 
           setBatchProgress({
             total: uniqueModels.length,
@@ -728,6 +737,10 @@ function ChannelTestDialogContent({
                 failed: failedCount,
               }
             )
+          )
+        } else if (skippedCount > 0) {
+          toast.info(
+            t('Image generation models are skipped in connection tests.')
           )
         } else {
           toast.success(
@@ -1212,6 +1225,10 @@ function TestStatusCell({ result }: { result?: TestResult }) {
     )
   }
 
+  if (result.status === 'skipped') {
+    return <StatusBadge label={t('Skipped')} variant='info' copyable={false} />
+  }
+
   return <StatusBadge label={t('Failed')} variant='danger' copyable={false} />
 }
 
@@ -1247,6 +1264,10 @@ function TestResultCell({
     ) : (
       <span className='text-muted-foreground text-sm'>-</span>
     )
+  }
+
+  if (result.status === 'skipped') {
+    return <span className='text-muted-foreground text-sm'>{t('Skipped')}</span>
   }
 
   return (

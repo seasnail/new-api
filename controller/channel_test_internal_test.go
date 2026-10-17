@@ -58,6 +58,21 @@ func TestValidateChannelProxy(t *testing.T) {
 	}
 }
 
+func TestBuildTestRequestOmitsOptionalOpenAITokenLimit(t *testing.T) {
+	t.Run("GPT-6 chat omits both token limit fields", func(t *testing.T) {
+		request := buildTestRequest("gpt-6", "openai", nil, false).(*dto.GeneralOpenAIRequest)
+		require.Nil(t, request.MaxTokens)
+		require.Nil(t, request.MaxCompletionTokens)
+	})
+
+	for _, modelName := range []string{"gpt-image-2.5-sunburst", "gpt-image-2.5-flare"} {
+		t.Run(modelName+" skips the connection test", func(t *testing.T) {
+			require.True(t, shouldSkipChannelTest(modelName, string(constant.EndpointTypeOpenAI)))
+		})
+	}
+	require.True(t, shouldSkipChannelTest("gpt-4o", string(constant.EndpointTypeImageGeneration)))
+}
+
 func TestValidateChannelRequiresNewAPIBaseURL(t *testing.T) {
 	tests := []struct {
 		name    string

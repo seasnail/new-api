@@ -370,7 +370,8 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 	}
 	isOModel := dto.IsOpenAIReasoningOModel(info.UpstreamModelName)
 	isGPT5Model := dto.IsOpenAIGPT5Model(info.UpstreamModelName)
-	if isOModel || isGPT5Model {
+	isGPT6Model := dto.IsOpenAIGPT6Model(info.UpstreamModelName)
+	if isOModel || isGPT5Model || isGPT6Model {
 		if lo.FromPtrOr(request.MaxCompletionTokens, uint(0)) == 0 && lo.FromPtrOr(request.MaxTokens, uint(0)) != 0 {
 			request.MaxCompletionTokens = request.MaxTokens
 			request.MaxTokens = nil

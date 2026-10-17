@@ -236,6 +236,10 @@ func IsOpenAIGPT5Model(modelName string) bool {
 	return strings.HasPrefix(modelName, "gpt-5")
 }
 
+func IsOpenAIGPT6Model(modelName string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(modelName)), "gpt-6")
+}
+
 func IsQwenThinkingBudgetModel(modelName string) bool {
 	normalized := strings.ToLower(strings.TrimSpace(modelName))
 	return strings.HasPrefix(normalized, "qwen") ||

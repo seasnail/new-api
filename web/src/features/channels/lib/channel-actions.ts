@@ -278,7 +278,8 @@ export async function handleTestChannel(
     success: boolean,
     responseTime?: number,
     error?: string,
-    errorCode?: string
+    errorCode?: string,
+    skipped?: boolean
   ) => void
 ): Promise<void> {
   const payload =
@@ -297,6 +298,14 @@ export async function handleTestChannel(
     const responseTime = getChannelTestResponseTime(response)
     const duration = formatChannelTestDuration(responseTime)
     const target = getChannelTestLabel(options)
+    if (response.skipped) {
+      const message = i18next.t(
+        'Image generation models are skipped in connection tests.'
+      )
+      if (!options?.silent) toast.info(message)
+      onTestComplete?.(false, responseTime, message, undefined, true)
+      return
+    }
     if (response.success) {
       if (!options?.silent) {
         toast.success(

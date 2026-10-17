@@ -39,6 +39,7 @@ type testResult struct {
 	context     *gin.Context
 	localErr    error
 	newAPIError *types.NewAPIError
+	skipped     bool
 }
 
 func normalizeChannelTestEndpoint(channel *model.Channel, endpointType string) string {
@@ -50,6 +51,14 @@ func normalizeChannelTestEndpoint(channel *model.Channel, endpointType string) s
 		return string(constant.EndpointTypeOpenAIResponse)
 	}
 	return normalized
+}
+
+func isImageGenerationTestModel(modelName string) bool {
+	return strings.Contains(strings.ToLower(modelName), "image")
+}
+
+func shouldSkipChannelTest(modelName string, endpointType string) bool {
+	return isImageGenerationTestModel(modelName) || constant.EndpointType(strings.TrimSpace(endpointType)) == constant.EndpointTypeImageGeneration
 }
 
 func resolveChannelTestUserID(c *gin.Context) (int, error) {
@@ -109,6 +118,9 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 	}
 
 	endpointType = normalizeChannelTestEndpoint(channel, endpointType)
+	if shouldSkipChannelTest(testModel, endpointType) {
+		return testResult{skipped: true}
+	}
 
 	requestPath := "/v1/chat/completions"
 
@@ -132,7 +144,6 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 			channel.Type == constant.ChannelTypeMokaAI { // 其他 embedding 模型
 			requestPath = "/v1/embeddings" // 修改请求路径
 		}
-
 		// VolcEngine 图像生成模型
 		if channel.Type == constant.ChannelTypeVolcEngine && strings.Contains(testModel, "seedream") {
 			requestPath = "/v1/images/generations"
@@ -143,6 +154,9 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 			requestPath = "/v1/responses"
 		}
 
+	}
+	if strings.Contains(requestPath, "/images/") {
+		return testResult{skipped: true}
 	}
 	// Gemini 原生流式通过 URL action（:streamGenerateContent）表达而非请求体字段，
 	// GeminiChatRequest.IsStream 依据请求 URL 判定，合成请求路径需与生产入口保持一致
@@ -773,7 +787,6 @@ func buildTestRequest(model string, endpointType string, channel *model.Channel,
 						Content: "hi",
 					},
 				},
-				MaxTokens: lo.ToPtr(uint(16)),
 			}
 			if isStream {
 				req.StreamOptions = &dto.StreamOptions{IncludeUsage: true}
@@ -827,18 +840,6 @@ func buildTestRequest(model string, endpointType string, channel *model.Channel,
 		testRequest.StreamOptions = &dto.StreamOptions{IncludeUsage: true}
 	}
 
-	if dto.IsOpenAIReasoningOModel(model) {
-		testRequest.MaxCompletionTokens = lo.ToPtr(uint(16))
-	} else if strings.Contains(model, "thinking") {
-		if !strings.Contains(model, "claude") {
-			testRequest.MaxTokens = lo.ToPtr(uint(50))
-		}
-	} else if strings.Contains(model, "gemini") {
-		testRequest.MaxTokens = lo.ToPtr(uint(3000))
-	} else {
-		testRequest.MaxTokens = lo.ToPtr(uint(16))
-	}
-
 	return testRequest
 }
 
@@ -875,6 +876,15 @@ func TestChannel(c *gin.Context) {
 		requestCtx = c.Request.Context()
 	}
 	result := testChannel(requestCtx, channel, testUserID, testModel, endpointType, isStream)
+	if result.skipped {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"skipped": true,
+			"message": "Image generation models are skipped in connection tests.",
+			"time":    0.0,
+		})
+		return
+	}
 	if result.localErr != nil {
 		resp := gin.H{
 			"success": false,
@@ -924,6 +934,9 @@ func testChannelForHealthCheck(ctx context.Context, channel *model.Channel, test
 	result := testChannel(ctx, channel, testUserID, "", "", shouldUseStreamForAutomaticChannelTest(channel))
 	milliseconds := time.Since(tik).Milliseconds()
 	if ctx.Err() != nil {
+		return summary
+	}
+	if result.skipped {
 		return summary
 	}
 
